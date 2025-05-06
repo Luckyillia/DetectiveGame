@@ -281,8 +281,18 @@ class GameRoomManagement:
             )
 
     def accuse_suspect(self, room_id, suspect_id):
+        """
+        Проверяет, соответствуют ли обвиняемые подозреваемые виновным
+        Поддерживает любое количество виновных
+
+        Args:
+            room_id: ID игровой комнаты
+            suspect_id: Строка с ID подозреваемых, разделенных пробелами
+
+        Returns:
+            bool: True если все виновные были правильно идентифицированы
+        """
         room_data = self.load().get(room_id, {})
-        # Получаем game_id из данных комнаты
         game_id = room_data.get('game_id')
 
         if not game_id:
@@ -293,22 +303,17 @@ class GameRoomManagement:
             )
             return False
 
-        # Используем обновленный GameStateService для получения данных игры
+        # Получаем данные игры через GameStateService
         game_data = self.game_state_service.get_game_state(game_id)
         culprit = game_data.get('isCulprit', {})
 
-        # ID подозреваемого(ых), разделяем по пробелам и очищаем
-        suspect_id_parts = [part.strip() for part in suspect_id.strip().split()]
-        culprit_id_parts = [part.strip() for part in culprit.get('id', '').strip().split()]
+        # Разбиваем ID подозреваемых и ID виновных по пробелам и очищаем от пробелов
+        suspect_id_parts = set(part.strip() for part in suspect_id.strip().split() if part.strip())
+        culprit_id_parts = set(part.strip() for part in culprit.get('id', '').strip().split() if part.strip())
 
-        result = False
-
-        # Случай: один ID
-        if len(culprit_id_parts) == 1:
-            result = suspect_id_parts[0] == culprit_id_parts[0]
-        # Случай: два ID — проверяем любую комбинацию
-        elif len(culprit_id_parts) == 2:
-            result = (set(suspect_id_parts) == set(culprit_id_parts))
+        # Сравниваем множества для проверки правильности обвинения
+        # Обвинение правильное, если множества ID подозреваемых и ID виновных идентичны
+        result = suspect_id_parts == culprit_id_parts
 
         self.log_service.add_user_action_log(
             user_id=app.storage.user.get('user_id'),

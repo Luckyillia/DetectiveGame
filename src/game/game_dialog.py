@@ -44,6 +44,9 @@ class GameDialog:
 
     def show_newspaper_dialog(self, game_data):
         with ui.dialog() as dialog, ui.card().classes('p-6 w-[600px] max-w-full'):
+            # Add newspaper image
+            ui.image("https://i.imgur.com/WWuaQDn.png").classes('w-full mb-4')
+
             ui.label('Газета').classes('text-xl font-bold mb-4')
 
             newspaper_text = game_data.get('gazeta', 'Газета пока пуста.')
@@ -69,6 +72,9 @@ class GameDialog:
 
         # Создаем диалоговое окно
         with ui.dialog() as dialog, ui.card().classes('p-6 w-96'):
+            # Add a thematic image for travel
+            ui.image("https://i.imgur.com/bSO5mPH.png").classes('w-full rounded-lg mb-4')
+
             ui.label('Куда хотите пойти?').classes('text-xl font-bold mb-4')
 
             place_input = ui.input('Введите ID места').classes('w-full mb-4')
@@ -90,6 +96,10 @@ class GameDialog:
         current_room_id = app.storage.user.get('game_state_id')
         with ui.dialog() as dialog, ui.card().classes('p-6 w-96'):
             ui.label('Кого вы подозреваете?').classes('text-xl font-bold mb-4')
+
+            # Добавим пояснение о вводе нескольких подозреваемых
+            ui.label('Для обвинения нескольких людей введите их ID через пробел').classes('text-sm text-gray-500 mb-2')
+
             suspect_input = ui.input('Введите ID жителя').classes('w-full mb-4')
             status_label = ui.label('').classes('text-red-500 mt-2')
 

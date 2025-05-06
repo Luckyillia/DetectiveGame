@@ -87,6 +87,8 @@ class GameUI:
         else:
             self.game_container = ui.element('div').classes('w-full')
 
+        ui.image("https://i.imgur.com/hhMQycN.png").classes('w-full max-w-4xl mx-auto rounded-lg shadow-lg mb-6')
+
         if not current_room_id:
             with self.game_container:
                 with ui.card().classes(
@@ -521,16 +523,23 @@ class GameUI:
             return
 
         culprit = game_data.get('isCulprit', {})
+        culprit_id = culprit.get('id', '')
+        culprit_parts = [part.strip() for part in culprit_id.split() if part.strip()]
 
         # Используем метод из game_room_management
         if self.game_room_management.accuse_suspect(room_id, suspect_id):
             # Используем метод из game_room_management для завершения игры
             self.game_room_management.finishing_game(room_id)
-            ui.notify('✅ Отличная работа! Вы раскрыли дело и нашли виновного!', color='emerald')
+
+            # Корректируем сообщение об успехе в зависимости от количества виновных
+            if len(culprit_parts) > 1:
+                ui.notify('✅ Отличная работа! Вы раскрыли дело и нашли всех виновных!', color='emerald')
+            else:
+                ui.notify('✅ Отличная работа! Вы раскрыли дело и нашли виновного!', color='emerald')
 
             self.log_service.add_log(
                 level='GAME',
-                message=f"Пользователь раскрыл дело и нашел виновного: {culprit.get('name', 'Неизвестно')}",
+                message=f"Пользователь раскрыл дело и нашел виновных: {culprit.get('name', 'Неизвестно')}",
                 user_id=user_id,
                 action="ACCUSE_CORRECT",
                 metadata={
@@ -541,7 +550,16 @@ class GameUI:
                 }
             )
         else:
-            ui.notify('❌ Увы, это был не тот человек! Попробуйте ещё раз.', color='rose')
+            # Проверяем, указал ли пользователь правильное количество подозреваемых
+            suspect_parts = [part.strip() for part in suspect_id.split() if part.strip()]
+
+            if len(suspect_parts) < len(culprit_parts):
+                ui.notify('❌ Увы, вы нашли не всех виновных! Попробуйте ещё раз.', color='rose')
+            elif len(suspect_parts) > len(culprit_parts):
+                ui.notify('❌ Увы, вы обвинили слишком много людей! Попробуйте ещё раз.', color='rose')
+            else:
+                ui.notify('❌ Увы, это не те люди! Попробуйте ещё раз.', color='rose')
+
             self.log_service.add_log(
                 level='GAME',
                 message=f"Пользователь неправильно предположил {suspect_id}",

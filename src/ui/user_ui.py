@@ -27,8 +27,6 @@ class UserUI:
         self.setup_ui()
 
     def setup_ui(self):
-
-        # Create UI tabs
         with ui.tabs().classes('w-full') as tabs:
             if (app.storage.user.get('username') == 'lucky_illia'):
                 one = ui.tab('Добавить пользователя')
