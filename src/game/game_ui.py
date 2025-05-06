@@ -87,8 +87,6 @@ class GameUI:
         else:
             self.game_container = ui.element('div').classes('w-full')
 
-        ui.image("https://i.imgur.com/hhMQycN.png").classes('w-full max-w-4xl mx-auto rounded-lg shadow-lg mb-6')
-
         if not current_room_id:
             with self.game_container:
                 with ui.card().classes(
@@ -235,6 +233,12 @@ class GameUI:
                                 label_text = f'💡 Подсказка: {location_name}'
 
                             with ui.expansion(label_text, icon=icon, group='location', value=visited).classes(expansion_classes):
+                                if location_id == '112102':  # Полиция
+                                    ui.image("https://i.imgur.com/w9a9Flo.jpeg").classes('w-full rounded-lg mb-4')
+                                elif location_id == '440321':  # Морг
+                                    ui.image("https://i.imgur.com/jdsmmAE.jpeg").classes('w-full rounded-lg mb-4')
+                                elif location_id == '220123':  # ЗАГС
+                                    ui.image("https://i.imgur.com/YMa1Pj5.jpeg").classes('w-full rounded-lg mb-4')
                                 if is_tooltip:
                                     ui.label('Это подсказка для текущего хода').classes(
                                         'text-amber-600 text-sm italic mb-2')

@@ -101,55 +101,46 @@ class GameRoomManagement:
         game_ui.show_game_interface
 
     def show_join_game_dialog(self, game_ui):
-        with ui.dialog() as dialog, ui.card().classes('p-6 w-96'):
-            ui.label('Присоединиться к игре').classes('text-xl font-bold mb-4')
+        with ui.dialog() as dialog, ui.card().classes('p-0 w-96 overflow-hidden rounded-xl'):
+            # Add detective office background
+            with ui.element('div').classes('relative w-full'):
+                # Background image with darkened overlay
+                ui.element('div').classes('absolute inset-0 bg-black bg-opacity-60')
+                ui.image("https://i.imgur.com/fSGMO72.jpg").classes('w-full object-cover opacity-40')
 
-            room_id_input = None
-            status_label = ui.label('').classes('mt-2')
+                # Content overlay
+                with ui.element('div').classes('relative z-10 p-6'):
+                    ui.label('Присоединиться к игре').classes('text-xl font-bold mb-4 text-white text-center')
 
-            def try_join():
-                room_id = room_id_input.value.strip()
-                if not room_id:
-                    status_label.text = 'Пожалуйста, введите ID игры.'
-                    status_label.classes('text-red-500 mt-2')
-                    self.log_service.add_user_action_log(
-                        user_id=app.storage.user.get('user_id'),
-                        action="JOIN_GAME_FAILED",
-                        message="Пользователь не ввел ID игры"
-                    )
-                    return
+                    room_id_input = ui.input('Введите ID игры').classes('w-full mb-4 bg-white/30 text-white')
+                    room_id_input.props('dark outlined')
+                    status_label = ui.label('').classes('mt-2')
 
-                if self.room_exists(room_id):
-                    app.storage.user.update({'game_state_id': room_id})
-                    self.update_user_game_state(app.storage.user.get('user_id'), room_id)
-                    self.add_user_for_room(app.storage.user.get('user_id'), room_id)
+                    def try_join():
+                        room_id = room_id_input.value.strip()
+                        if not room_id:
+                            status_label.text = 'Пожалуйста, введите ID игры.'
+                            status_label.classes('text-red-500 mt-2')
+                            return
 
-                    self.log_service.add_user_action_log(
-                        user_id=app.storage.user.get('user_id'),
-                        action="JOIN_GAME_SUCCESS",
-                        message=f"Пользователь успешно присоединился к игре",
-                        metadata={"joined_room_id": room_id}
-                    )
+                        if self.room_exists(room_id):
+                            app.storage.user.update({'game_state_id': room_id})
+                            self.update_user_game_state(app.storage.user.get('user_id'), room_id)
+                            self.add_user_for_room(app.storage.user.get('user_id'), room_id)
+                            status_label.text = ''
+                            dialog.close()
+                            ui.notify('✅ Вы успешно присоединились к игре!', type='positive')
+                            game_ui.show_game_interface
+                        else:
+                            status_label.text = '❌ Игры с таким ID не существует.'
+                            status_label.classes('text-red-500 mt-2')
 
-                    status_label.text = ''
-                    dialog.close()
-                    ui.notify('✅ Вы успешно присоединились к игре!', type='positive')
-                    game_ui.show_game_interface
-                else:
-                    status_label.text = '❌ Игры с таким ID не существует.'
-                    status_label.classes('text-red-500 mt-2')
+                    # Attach Enter key event
+                    room_id_input.on('keydown.enter', try_join)
 
-                    self.log_service.add_user_action_log(
-                        user_id=app.storage.user.get('user_id'),
-                        action="JOIN_GAME_FAILED",
-                        message=f"Пользователь пытался присоединиться к несуществующей игре",
-                        metadata={"attempted_room_id": room_id}
-                    )
-
-            room_id_input = ui.input(label='Введите ID места').classes('w-full mb-4').on('keydown.enter', try_join)
-            with ui.row().classes('w-full justify-between'):
-                ui.button('Отмена', on_click=dialog.close).classes('bg-gray-300 dark:bg-gray-700')
-                ui.button('Войти', on_click=lambda: try_join()).classes('bg-blue-500 text-white')
+                    with ui.row().classes('w-full justify-between'):
+                        ui.button('Отмена', on_click=dialog.close).classes('bg-gray-600 text-white')
+                        ui.button('Войти', on_click=lambda: try_join()).classes('bg-green-600 text-white')
 
         dialog.open()
 
