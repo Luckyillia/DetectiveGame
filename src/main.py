@@ -1,3 +1,5 @@
+import os
+
 from nicegui import app, ui
 from src.services.login import AuthMiddleware
 from src.ui.user_ui import UserUI
@@ -9,7 +11,6 @@ if __name__ in {"__main__", "__mp_main__"}:
     # registration = Registration()
     app.add_middleware(AuthMiddleware)
     load_dotenv()
-
 
     @ui.page('/')
     def main_page() -> None:
