@@ -136,6 +136,7 @@ def login(redirect_to: str = '/', error: str = None) -> Optional[RedirectRespons
                 metadata={"entered_username": entered_username}
             )
 
+
     if app.storage.user.get('authenticated', False):
         return RedirectResponse('/')
 
@@ -229,7 +230,6 @@ def reset_password():
             email_sent = email_service.send_password_reset_code(user_email, username, reset_code)
 
             if email_sent:
-                ui.notify(f'Код для восстановления пароля отправлен на email', type='positive')
                 # Для тестирования можно временно оставить вывод кода
                 # ui.notify(f'Для тестирования - код: {reset_code}', type='info', timeout=5000)
 
@@ -252,6 +252,7 @@ def reset_password():
 
 @ui.page('/confirm-reset')
 def confirm_reset(username: str = ''):
+    ui.notify(f'Код для восстановления пароля отправлен на email', type='positive')
     reset_container = ui.element('div').classes('w-full max-w-md mx-auto mt-10')
 
     def confirm_reset_code():

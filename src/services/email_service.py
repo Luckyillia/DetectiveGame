@@ -51,43 +51,56 @@ class EmailService:
             return False
 
     def send_password_reset_code(self, recipient_email, username, reset_code):
-        """Отправляет код восстановления пароля"""
-        subject = "Восстановление пароля Detective Chronicles"
+        subject = "Код восстановления пароля для Detective Chronicles"
 
         # Текстовая версия
         text_message = f"""
-Здравствуйте, {username}!
+    Здравствуйте, {username}!
 
-Вы запросили восстановление пароля в приложении Detective Chronicles.
-Ваш код для восстановления пароля: {reset_code}
+    Вы запросили восстановление пароля в приложении Detective Chronicles.
+    Ваш код для восстановления пароля: {reset_code}
 
-Код действителен в течение 15 минут.
-Если вы не запрашивали восстановление пароля, проигнорируйте это письмо.
+    Код действителен в течение 15 минут.
+    Если вы не запрашивали восстановление пароля, просто проигнорируйте это письмо.
 
-С уважением,
-Команда Detective Chronicles
-"""
+    С уважением,
+    Команда Detective Chronicles
+    https://europe.on-air.io/luckyillia/detective
+    """
 
-        # HTML версия для красивого отображения
+        # HTML версия - более профессионально оформленная
         html_message = f"""
-<html>
-<head></head>
-<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-    <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px;">
-        <h2 style="color: #2a5885;">Восстановление пароля</h2>
-        <p>Здравствуйте, <strong>{username}</strong>!</p>
-        <p>Вы запросили восстановление пароля в приложении Detective Chronicles.</p>
-        <p>Ваш код для восстановления пароля:</p>
-        <div style="background-color: #f5f5f5; padding: 15px; margin: 15px 0; text-align: center; font-size: 24px; letter-spacing: 5px; font-weight: bold;">
-            {reset_code}
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background-color: #f9f9f9; border: 1px solid #ddd; border-radius: 5px; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="color: #2a5885; margin: 0;">Восстановление пароля</h2>
+            </div>
+
+            <p>Здравствуйте, <strong>{username}</strong>!</p>
+            <p>Вы запросили восстановление пароля в приложении Detective Chronicles.</p>
+            <p>Ваш код для восстановления пароля:</p>
+
+            <div style="background-color: #f5f5f5; padding: 15px; margin: 15px 0; text-align: center; font-size: 24px; letter-spacing: 5px; font-weight: bold; border-radius: 4px;">
+                {reset_code}
+            </div>
+
+            <p>Код действителен в течение <strong>15 минут</strong>.</p>
+            <p><em>Если вы не запрашивали восстановление пароля, пожалуйста, проигнорируйте это письмо.</em></p>
+
+            <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+
+            <p style="font-size: 12px; color: #777; text-align: center;">
+                © Detective Chronicles 2023<br>
+                <a href="https://europe.on-air.io/luckyillia/detective" style="color: #2a5885; text-decoration: none;">Detective Game</a>
+            </p>
         </div>
-        <p>Код действителен в течение 15 минут.</p>
-        <p><em>Если вы не запрашивали восстановление пароля, проигнорируйте это письмо.</em></p>
-        <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
-        <p style="font-size: 12px; color: #777;">С уважением,<br>Команда Detective Chronicles</p>
-    </div>
-</body>
-</html>
-"""
+    </body>
+    </html>
+    """
 
         return self.send_email(recipient_email, subject, text_message, html_message)

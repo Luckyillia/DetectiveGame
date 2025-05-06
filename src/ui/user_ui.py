@@ -63,6 +63,7 @@ class UserUI:
                 self.game_ui.show_game_interface
             with ui.tab_panel(seven):
                 self.user_profile.show_profile_ui(app.storage.user.get('user_id'))
+        self.check_and_request_email()
 
 
     def switch_dark_mode(self, arg):
@@ -75,3 +76,60 @@ class UserUI:
     def logout(self) -> None:
         app.storage.user.clear()
         ui.navigate.to('/login')
+
+    def check_and_request_email(self):
+        """Проверяет наличие email у пользователя и при необходимости запрашивает его"""
+        user_id = app.storage.user.get('user_id')
+        if not user_id:
+            return  # Пользователь не авторизован
+
+        # Получаем данные пользователя
+        user = self.user_service.get_user_by_id(user_id)
+        if not user:
+            return  # Пользователь не найден
+
+        # Проверяем наличие email
+        if not user.get('email'):
+            # Создаем диалог для запроса email
+            with ui.dialog() as dialog, ui.card().classes('p-6 w-96'):
+                ui.label('Добавьте email для безопасности аккаунта').classes('text-xl font-bold mb-4')
+                ui.label('Email позволит восстановить доступ к аккаунту при утере пароля').classes('mb-4 text-gray-600')
+
+                email_input = ui.input('Email').classes('w-full mb-4')
+                status_label = ui.label('').classes('text-red-500 my-2')
+
+                def validate_email(email):
+                    """Проверяет корректность email"""
+                    import re
+                    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+                    return re.match(pattern, email) is not None
+
+                def save_email():
+                    email = email_input.value.strip()
+                    if not email:
+                        status_label.text = 'Поле email не может быть пустым'
+                        return
+
+                    if not validate_email(email):
+                        status_label.text = 'Введите корректный email адрес'
+                        return
+
+                    # Сохраняем email в профиле пользователя
+                    result = self.user_service.edit_user(user_id, {'email': email})
+                    if result:
+                        self.log_services.add_user_action_log(
+                            user_id=user_id,
+                            action="EMAIL_ADDED",
+                            message=f"Пользователь добавил email в свой профиль",
+                            metadata={"email": email}
+                        )
+                        ui.notify('Email успешно сохранен', type='positive')
+                        dialog.close()
+                    else:
+                        status_label.text = 'Ошибка при сохранении email'
+
+                with ui.row().classes('w-full justify-between mt-4'):
+                    ui.button('Сделать позже', on_click=dialog.close).classes('bg-gray-300')
+                    ui.button('Сохранить', on_click=save_email).classes('bg-blue-500 text-white')
+
+            dialog.open()
