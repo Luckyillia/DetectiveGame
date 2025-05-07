@@ -2,8 +2,8 @@
   "chameleon_4728": {
     "room_id": "chameleon_4728",
     "created_at": 1746653057,
-    "last_activity": 1746655320,
-    "status": "waiting",
+    "last_activity": 1746656860,
+    "status": "playing",
     "host_id": "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae",
     "players": [
       {
@@ -29,12 +29,15 @@
       }
     ],
     "game_data": {
-      "category": null,
-      "word": null,
-      "chameleon_index": -1,
+      "category": "Инструменты",
+      "word": "Гаечный ключ",
+      "chameleon_index": 0,
       "descriptions": [],
-      "votes": {},
-      "round": 0,
+      "votes": {
+        "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae": "68d50bda-7a0c-43b4-a5a6-178693f37a3c",
+        "6b652e65-7cf9-4377-8031-192076a4e125": "68d50bda-7a0c-43b4-a5a6-178693f37a3c"
+      },
+      "round": 2,
       "current_player_index": 0
     }
   }
