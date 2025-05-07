@@ -1,5 +1,7 @@
 import time
 from nicegui import ui, app
+
+from src.services.user_service import UserService
 from src.game.game_state_service import GameStateService
 from src.game.game_dialog import GameDialog
 from src.game.game_room_management import GameRoomManagement
@@ -12,6 +14,7 @@ class GameUI:
         self.timer = None
         # Инициализируем сервисы - GameStateService теперь работает с отдельными файлами для каждой игры
         self.log_service = LogService()
+        self.user_service = UserService()
         self.game_state_service = GameStateService()
         self.game_dialog = GameDialog(self)
         self.game_room_management = GameRoomManagement(game_ui=self)
@@ -500,6 +503,7 @@ class GameUI:
 
             # Обновляем данные игры
             self.refresh_game_data(room_id)
+            self.user_service.increment_user_moves(user_id)
             # Обновляем только игровой интерфейс
             self.show_game_interface
         else:
@@ -540,7 +544,7 @@ class GameUI:
                 ui.notify('✅ Отличная работа! Вы раскрыли дело и нашли всех виновных!', color='emerald')
             else:
                 ui.notify('✅ Отличная работа! Вы раскрыли дело и нашли виновного!', color='emerald')
-
+            self.user_service.increment_users_completed_games(room_data)
             self.log_service.add_log(
                 level='GAME',
                 message=f"Пользователь раскрыл дело и нашел виновных: {culprit.get('name', 'Неизвестно')}",

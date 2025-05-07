@@ -377,7 +377,7 @@ class GameRoomManagement:
             if 'users' not in data[room_id]:
                 data[room_id]['users'] = []
             data[room_id]['users'].append(user_id)
-
+            self.user_service.increment_user_rooms(user_id, room_id)
             self.log_service.add_system_log(
                 user_id=app.storage.user.get('user_id'),
                 message=f"Пользователь добавлен в комнату",

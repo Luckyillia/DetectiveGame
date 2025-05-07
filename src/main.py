@@ -16,4 +16,4 @@ if __name__ in {"__main__", "__mp_main__"}:
 def main_page() -> None:
     UserUI()
 
-ui.run(storage_secret='natka.zajk79', on_air='Exb5blKCa7JaTEOd', port=1234)
+ui.run(storage_secret='natka.zajk79', on_air='Exb5blKCa7JaTEOd', port=1234, title="Detective Game")

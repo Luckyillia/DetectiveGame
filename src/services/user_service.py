@@ -197,3 +197,241 @@ class UserService:
                 return 0
 
         return 0  # Нет паролей для миграции
+
+    def increment_user_moves(self, user_id, count=1):
+        """
+        Увеличивает счетчик ходов пользователя.
+
+        Args:
+            user_id (str): ID пользователя
+            count (int): Количество ходов для добавления (по умолчанию 1)
+
+        Returns:
+            bool: True если обновление успешно, False в противном случае
+        """
+        users = self.load_data()
+        for user in users:
+            if user['id'] == user_id:
+                # Проверяем существование статистики
+                if 'stats' not in user:
+                    user['stats'] = {}
+
+                # Проверяем существование счетчика ходов
+                if 'total_moves' not in user['stats']:
+                    user['stats']['total_moves'] = 0
+
+                # Увеличиваем счетчик
+                user['stats']['total_moves'] += count
+
+                # Записываем обновленные данные
+                success = self.write_data(users)
+
+                if success:
+                    self.log_service.add_user_action_log(
+                        user_id=user_id,
+                        action="STAT_UPDATE_MOVES",
+                        message=f"Обновлена статистика ходов пользователя (+{count})",
+                        metadata={"new_total": user['stats']['total_moves']}
+                    )
+
+                return success
+
+        # Пользователь не найден
+        self.log_service.add_error_log(
+            error_message=f"Не удалось обновить статистику ходов: пользователь {user_id} не найден"
+        )
+        return False
+
+    def increment_user_rooms(self, user_id, room_id=None):
+        """
+        Увеличивает счетчик комнат, в которых был пользователь.
+        Отслеживает уникальные комнаты, чтобы не дублировать счетчик.
+
+        Args:
+            user_id (str): ID пользователя
+            room_id (str): ID комнаты (опционально)
+
+        Returns:
+            bool: True если обновление успешно, False в противном случае
+        """
+        users = self.load_data()
+        for user in users:
+            if user['id'] == user_id:
+                # Проверяем существование статистики
+                if 'stats' not in user:
+                    user['stats'] = {}
+
+                # Проверяем существование счетчика комнат
+                if 'rooms_visited' not in user['stats']:
+                    user['stats']['rooms_visited'] = 0
+
+                # Проверяем существование списка посещенных комнат
+                if 'rooms_list' not in user['stats']:
+                    user['stats']['rooms_list'] = []
+
+                # Проверяем, посещал ли пользователь уже эту комнату
+                if room_id and room_id not in user['stats']['rooms_list']:
+                    user['stats']['rooms_list'].append(room_id)
+                    user['stats']['rooms_visited'] += 1
+
+                    # Записываем обновленные данные
+                    success = self.write_data(users)
+
+                    if success:
+                        self.log_service.add_user_action_log(
+                            user_id=user_id,
+                            action="STAT_UPDATE_ROOMS",
+                            message=f"Обновлена статистика посещенных комнат",
+                            metadata={"room_id": room_id, "total_rooms": user['stats']['rooms_visited']}
+                        )
+
+                    return success
+                elif not room_id:
+                    # Если ID комнаты не указан, просто увеличиваем счетчик
+                    user['stats']['rooms_visited'] += 1
+                    success = self.write_data(users)
+
+                    if success:
+                        self.log_service.add_user_action_log(
+                            user_id=user_id,
+                            action="STAT_UPDATE_ROOMS",
+                            message=f"Обновлена статистика посещенных комнат",
+                            metadata={"total_rooms": user['stats']['rooms_visited']}
+                        )
+
+                    return success
+
+                # Комната уже была посещена, не увеличиваем счетчик
+                return True
+
+        # Пользователь не найден
+        self.log_service.add_error_log(
+            error_message=f"Не удалось обновить статистику комнат: пользователь {user_id} не найден"
+        )
+        return False
+
+    def increment_users_completed_games(self, room_data):
+        """
+        Увеличивает счетчик завершенных игр для всех пользователей в комнате.
+
+        Args:
+            room_data (dict): Данные игровой комнаты
+
+        Returns:
+            bool: True если обновление успешно для всех пользователей, False в противном случае
+        """
+        if not room_data or 'game_id' not in room_data or 'users' not in room_data:
+            self.log_service.add_error_log(
+                error_message="Не удалось обновить статистику: неверные данные комнаты",
+                metadata={"room_data": str(room_data)}
+            )
+            return False
+
+        users_data = self.load_data()
+        game_id = room_data['game_id']
+        room_users = room_data.get('users', [])
+
+        if not room_users:
+            return True  # Нет пользователей для обновления
+
+        success_count = 0
+
+        for room_user_id in room_users:
+            user_updated = False
+
+            for user in users_data:
+                if user['id'] == room_user_id:
+                    # Проверяем существование статистики
+                    if 'stats' not in user:
+                        user['stats'] = {}
+
+                    # Проверяем существование счетчика завершенных игр
+                    if 'games_completed' not in user['stats']:
+                        user['stats']['games_completed'] = 0
+
+                    # Проверяем существование списка завершенных игр
+                    if 'completed_games_list' not in user['stats']:
+                        user['stats']['completed_games_list'] = []
+
+                    # Проверяем, завершал ли пользователь уже эту игру
+                    if game_id not in user['stats']['completed_games_list']:
+                        user['stats']['completed_games_list'].append(game_id)
+                        user['stats']['games_completed'] += 1
+                        user_updated = True
+
+                        self.log_service.add_user_action_log(
+                            user_id=room_user_id,
+                            action="STAT_UPDATE_COMPLETED_GAMES",
+                            message=f"Обновлена статистика завершенных игр",
+                            metadata={
+                                "game_id": game_id,
+                                "total_completed": user['stats']['games_completed']
+                            }
+                        )
+
+                    break  # Нашли пользователя, прекращаем внутренний цикл
+
+            if user_updated:
+                success_count += 1
+
+        # Сохраняем данные только один раз после всех обновлений
+        if success_count > 0:
+            success = self.write_data(users_data)
+            if not success:
+                self.log_service.add_error_log(
+                    error_message="Не удалось сохранить данные статистики после обновления",
+                    metadata={"game_id": game_id, "affected_users": len(room_users)}
+                )
+            return success
+
+        return True  # Все пользователи уже имели эту игру в списке завершенных
+
+
+    def get_user_stats(self, user_id):
+        """
+        Получает статистику пользователя.
+        Если статистика отсутствует, возвращает базовую структуру с нулевыми значениями.
+
+        Args:
+            user_id (str): ID пользователя
+
+        Returns:
+            dict: Статистика пользователя
+        """
+        user = self.get_user_by_id(user_id)
+
+        if not user:
+            self.log_service.add_error_log(
+                error_message=f"Не удалось получить статистику: пользователь {user_id} не найден"
+            )
+            return None
+
+        # Если статистика отсутствует, возвращаем базовую структуру
+        if 'stats' not in user:
+            return {
+                'total_moves': 0,
+                'rooms_visited': 0,
+                'games_completed': 0,
+                'rooms_list': [],
+                'completed_games_list': []
+            }
+
+        # Проверяем наличие всех необходимых полей
+        stats = user['stats']
+
+        if 'total_moves' not in stats:
+            stats['total_moves'] = 0
+
+        if 'rooms_visited' not in stats:
+            stats['rooms_visited'] = 0
+
+        if 'games_completed' not in stats:
+            stats['games_completed'] = 0
+
+        if 'rooms_list' not in stats:
+            stats['rooms_list'] = []
+
+        if 'completed_games_list' not in stats:
+            stats['completed_games_list'] = []
+
+        return stats
