@@ -63,12 +63,13 @@ class ChameleonRoomService:
         """Создает новую комнату."""
         # Генерируем уникальный ID комнаты
         room_id = f"chameleon_{random.randint(1000, 9999)}"
+        current_time = int(time.time())
 
         # Создаем структуру данных комнаты
         room_data = {
             "room_id": room_id,
-            "created_at": int(time.time()),
-            "last_activity": int(time.time()),
+            "created_at": current_time,
+            "last_activity": current_time,
             "status": "waiting",  # waiting, playing, finished
             "host_id": host_id,
             "players": [
@@ -76,7 +77,8 @@ class ChameleonRoomService:
                     "id": host_id,
                     "name": host_name,
                     "is_host": True,
-                    "joined_at": int(time.time()),
+                    "joined_at": current_time,
+                    "last_action": current_time,
                     "is_ready": True
                 }
             ],
@@ -143,6 +145,7 @@ class ChameleonRoomService:
             return False
 
         room = rooms[room_id]
+        current_time = int(time.time())
 
         # Проверяем, не находится ли уже игрок в комнате
         if any(player["id"] == player_id for player in room["players"]):
@@ -153,11 +156,12 @@ class ChameleonRoomService:
             "id": player_id,
             "name": player_name,
             "is_host": False,
-            "joined_at": int(time.time()),
+            "joined_at": current_time,
+            "last_action": current_time,
             "is_ready": False
         })
 
-        room["last_activity"] = int(time.time())
+        room["last_activity"] = current_time
         success = self.save_rooms(rooms)
 
         if success:
@@ -178,6 +182,7 @@ class ChameleonRoomService:
             return False
 
         room = rooms[room_id]
+        current_time = int(time.time())
 
         # Находим игрока
         player_index = next((i for i, p in enumerate(room["players"]) if p["id"] == player_id), -1)
@@ -191,7 +196,7 @@ class ChameleonRoomService:
 
         # Удаляем игрока
         room["players"].pop(player_index)
-        room["last_activity"] = int(time.time())
+        room["last_activity"] = current_time
 
         # Если комната пуста, удаляем её
         if not room["players"]:
@@ -200,6 +205,7 @@ class ChameleonRoomService:
         elif is_host and room["players"]:
             room["players"][0]["is_host"] = True
             room["host_id"] = room["players"][0]["id"]
+            room["players"][0]["last_action"] = current_time
 
         success = self.save_rooms(rooms)
 
@@ -221,15 +227,17 @@ class ChameleonRoomService:
             return False
 
         room = rooms[room_id]
+        current_time = int(time.time())
 
         # Находим игрока
         player = next((p for p in room["players"] if p["id"] == player_id), None)
         if not player:
             return False
 
-        # Устанавливаем статус готовности
+        # Устанавливаем статус готовности и время последнего действия
         player["is_ready"] = is_ready
-        room["last_activity"] = int(time.time())
+        player["last_action"] = current_time
+        room["last_activity"] = current_time
 
         success = self.save_rooms(rooms)
 
@@ -259,6 +267,7 @@ class ChameleonRoomService:
             return False
 
         room = rooms[room_id]
+        current_time = int(time.time())
 
         # Проверяем, что в комнате достаточно игроков
         if len(room["players"]) < 3:
@@ -276,7 +285,11 @@ class ChameleonRoomService:
         room["game_data"]["votes"] = {}
         room["game_data"]["round"] = 1
         room["game_data"]["current_player_index"] = 0
-        room["last_activity"] = int(time.time())
+        room["last_activity"] = current_time
+
+        # Обновляем время действия для всех игроков
+        for player in room["players"]:
+            player["last_action"] = current_time
 
         success = self.save_rooms(rooms)
 
@@ -305,6 +318,7 @@ class ChameleonRoomService:
             return False
 
         room = rooms[room_id]
+        current_time = int(time.time())
 
         # Проверяем, что игра в процессе
         if room["status"] != "playing":
@@ -315,12 +329,15 @@ class ChameleonRoomService:
         if not player:
             return False
 
+        # Обновляем время последнего действия игрока
+        player["last_action"] = current_time
+
         # Добавляем описание
         room["game_data"]["descriptions"].append({
             "player_id": player_id,
             "player_name": player["name"],
             "description": description,
-            "timestamp": int(time.time())
+            "timestamp": current_time
         })
 
         # Переходим к следующему игроку
@@ -331,7 +348,7 @@ class ChameleonRoomService:
         if len(room["game_data"]["descriptions"]) >= len(room["players"]):
             room["game_data"]["round"] = 2  # Раунд голосования
 
-        room["last_activity"] = int(time.time())
+        room["last_activity"] = current_time
         success = self.save_rooms(rooms)
 
         if success:
@@ -356,6 +373,7 @@ class ChameleonRoomService:
             return False
 
         room = rooms[room_id]
+        current_time = int(time.time())
 
         # Проверяем, что идет раунд голосования
         if room["status"] != "playing" or room["game_data"]["round"] != 2:
@@ -371,9 +389,12 @@ class ChameleonRoomService:
         if not voted:
             return False
 
+        # Обновляем время последнего действия игрока
+        voter["last_action"] = current_time
+
         # Добавляем голос
         room["game_data"]["votes"][voter_id] = voted_id
-        room["last_activity"] = int(time.time())
+        room["last_activity"] = current_time
 
         # Если все проголосовали, переходим к результатам
         if len(room["game_data"]["votes"]) >= len(room["players"]):
@@ -442,6 +463,7 @@ class ChameleonRoomService:
             return None
 
         room = rooms[room_id]
+        current_time = int(time.time())
 
         # Проверяем, что идет раунд результатов
         if room["status"] != "playing" or room["game_data"]["round"] != 3:
@@ -456,13 +478,17 @@ class ChameleonRoomService:
         if chameleon_id != actual_chameleon_id:
             return None
 
+        # Обновляем время последнего действия игрока
+        chameleon_player = room["players"][chameleon_index]
+        chameleon_player["last_action"] = current_time
+
         # Проверяем догадку
         actual_word = room["game_data"]["word"]
         is_correct = word_guess.lower() == actual_word.lower()
 
         # Если игра завершена, обновляем статус
         room["status"] = "finished"
-        room["last_activity"] = int(time.time())
+        room["last_activity"] = current_time
 
         success = self.save_rooms(rooms)
 
@@ -492,8 +518,14 @@ class ChameleonRoomService:
             return False
 
         room = rooms[room_id]
+        current_time = int(time.time())
+
         room["status"] = "finished"
-        room["last_activity"] = int(time.time())
+        room["last_activity"] = current_time
+
+        # Обновляем время последнего действия для всех игроков
+        for player in room["players"]:
+            player["last_action"] = current_time
 
         success = self.save_rooms(rooms)
 
@@ -515,6 +547,7 @@ class ChameleonRoomService:
             return False
 
         room = rooms[room_id]
+        current_time = int(time.time())
 
         # Сбрасываем данные игры
         room["status"] = "waiting"
@@ -528,11 +561,12 @@ class ChameleonRoomService:
             "current_player_index": 0
         }
 
-        # Сбрасываем готовность игроков
+        # Сбрасываем готовность игроков и обновляем время действия
         for player in room["players"]:
             player["is_ready"] = player.get("is_host", False)
+            player["last_action"] = current_time
 
-        room["last_activity"] = int(time.time())
+        room["last_activity"] = current_time
         success = self.save_rooms(rooms)
 
         if success:

@@ -1,6 +1,7 @@
 from nicegui import ui
 import random
 import string
+from datetime import datetime
 
 
 class ChameleonComponents:
@@ -62,6 +63,8 @@ class ChameleonComponents:
         # Добавляем колонку со статусом для комнаты ожидания
         if current_round == 0:
             columns.append({'name': 'status', 'label': 'Статус', 'field': 'status', 'align': 'center'})
+            columns.append(
+                {'name': 'last_action', 'label': 'Последнее действие', 'field': 'last_action', 'align': 'center'})
 
         # Добавляем колонку голосов для режима голосования и результатов
         if current_round >= 2:
@@ -103,6 +106,14 @@ class ChameleonComponents:
                 else:
                     status_items.append("⏳ Не готов")
                 row['status'] = ", ".join(status_items)
+
+                # Добавляем время последнего действия
+                last_action_time = player.get("last_action", player.get("joined_at", 0))
+                if last_action_time:
+                    formatted_time = datetime.fromtimestamp(last_action_time).strftime("%H:%M:%S")
+                    row['last_action'] = formatted_time
+                else:
+                    row['last_action'] = "—"
 
             # Добавляем количество голосов для режимов голосования и результатов
             if current_round >= 2:
@@ -202,7 +213,7 @@ class ChameleonComponents:
                             word = words[word_index] if word_index < len(words) else ""
 
                             with ui.card().classes(
-                                    'p-2 min-h-12 flex items-center justify-center bg-white dark:bg-gray-700 rounded-md shadow hover:shadow-md transition-shadow'):
+                                    'p-2 min-h-12 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-md shadow hover:shadow-md transition-shadow'):
                                 ui.label(word).classes(
                                     'text-sm font-medium text-center text-gray-800 dark:text-gray-200')
 

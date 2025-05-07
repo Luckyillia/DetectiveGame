@@ -71,7 +71,7 @@ class ChameleonGameUI:
         self.player_name = app.storage.user.get('username', '')
 
         with self.game_container:
-            with ui.card().classes('w-full p-6 rounded-xl shadow-lg bg-white dark:bg-gray-800'):
+            with ui.card().classes('w-full p-6 rounded-xl shadow-lg bg-gray-100 dark:bg-gray-800'):
                 self.components.create_header(
                     'Игра "Хамелеон"',
                     'Социальная игра-детектив: найди, кто из игроков не знает секретное слово!',
@@ -96,7 +96,7 @@ class ChameleonGameUI:
                     В этой версии игры обсуждение происходит вживую, а интерфейс служит для отображения информации.
                     """).classes('p-3')
 
-            with ui.card().classes('w-full p-6 mt-4 rounded-xl shadow-lg bg-white dark:bg-gray-800'):
+            with ui.card().classes('w-full p-6 mt-4 rounded-xl shadow-lg bg-gray-100 dark:bg-gray-800'):
                 with ui.row().classes('w-full items-center mb-4'):
                     ui.icon('person').classes('text-indigo-500 mr-2')
                     ui.label('Ваше имя:').classes('mr-2 font-medium text-gray-700 dark:text-gray-300')
@@ -123,7 +123,7 @@ class ChameleonGameUI:
 
     def _create_available_rooms_list(self):
         """Создает и отображает список доступных комнат"""
-        with ui.card().classes('w-full p-6 mt-4 rounded-xl shadow-lg bg-white dark:bg-gray-800'):
+        with ui.card().classes('w-full p-6 mt-4 rounded-xl shadow-lg bg-gray-100 dark:bg-gray-800'):
             ui.label('Доступные комнаты:').classes('text-xl font-bold mb-4 text-indigo-600 dark:text-indigo-400')
             rooms_container = ui.element('div').classes('w-full')
 
@@ -167,7 +167,7 @@ class ChameleonGameUI:
                                         on_click=lambda r=room_id: self.join_game(r)
                                     ).props('size=sm color=primary')
                     else:
-                        with ui.card().classes('w-full p-4 bg-gray-50 dark:bg-gray-700 rounded-lg'):
+                        with ui.card().classes('w-full p-4 bg-gray-200 dark:bg-gray-700 rounded-lg'):
                             with ui.row().classes('items-center justify-center text-gray-500 dark:text-gray-400'):
                                 ui.icon('info').classes('text-xl mr-2')
                                 ui.label('Нет доступных комнат').classes('text-center')
@@ -222,7 +222,7 @@ class ChameleonGameUI:
 
     def show_join_menu(self):
         """Показывает меню для присоединения к игре."""
-        with ui.dialog() as dialog, ui.card().classes('p-6 w-96 rounded-xl shadow-lg bg-white dark:bg-gray-800'):
+        with ui.dialog() as dialog, ui.card().classes('p-6 w-96 rounded-xl shadow-lg bg-gray-100 dark:bg-gray-800'):
             ui.label('Присоединиться к игре').classes(
                 'text-xl font-bold mb-4 text-center text-indigo-600 dark:text-indigo-400')
 
@@ -308,7 +308,7 @@ class ChameleonGameUI:
         is_host = current_player and current_player.get("is_host", False)
 
         with self.game_container:
-            with ui.card().classes('w-full p-6 rounded-xl shadow-lg bg-white dark:bg-gray-800'):
+            with ui.card().classes('w-full p-6 rounded-xl shadow-lg bg-gray-100 dark:bg-gray-800'):
                 self.components.create_header(
                     'Игра "Хамелеон"',
                     f'ID комнаты: {self.current_room_id}'
@@ -326,7 +326,7 @@ class ChameleonGameUI:
                         ).classes('bg-blue-600 hover:bg-blue-700 text-white')
 
                     # Список игроков
-                    with ui.card().classes('w-full p-4 mb-4 bg-white dark:bg-gray-700 rounded-lg shadow'):
+                    with ui.card().classes('w-full p-4 mb-4 bg-gray-200 dark:bg-gray-700 rounded-lg shadow'):
                         ui.label('Игроки:').classes('font-bold mb-3 text-lg text-gray-800 dark:text-gray-200')
 
                         # Создаем таблицу игроков
@@ -473,7 +473,7 @@ class ChameleonGameUI:
                        None) is not None
 
         with self.game_container:
-            with ui.card().classes('w-full p-6 rounded-xl shadow-lg bg-white dark:bg-gray-800 mb-4'):
+            with ui.card().classes('w-full p-6 rounded-xl shadow-lg bg-gray-100 dark:bg-gray-800 mb-4'):
                 self.components.create_header('Игра "Хамелеон"')
 
                 # Показываем категорию всем игрокам
@@ -516,7 +516,7 @@ class ChameleonGameUI:
             self.components.create_word_grid(category, words)
 
             # Список игроков с голосованием
-            with ui.card().classes('w-full p-6 rounded-xl shadow-lg bg-white dark:bg-gray-800 mb-4'):
+            with ui.card().classes('w-full p-6 rounded-xl shadow-lg bg-gray-100 dark:bg-gray-800 mb-4'):
                 ui.label('Игроки:').classes('text-lg font-bold mb-3 text-gray-800 dark:text-gray-200')
 
                 # Создаем таблицу игроков с учетом текущего раунда
@@ -533,7 +533,7 @@ class ChameleonGameUI:
             if current_round == 3:
                 vote_results = self.room_service.get_vote_results(self.current_room_id)
 
-                with ui.card().classes('w-full p-6 rounded-xl shadow-lg bg-white dark:bg-gray-800 mb-4'):
+                with ui.card().classes('w-full p-6 rounded-xl shadow-lg bg-gray-100 dark:bg-gray-800 mb-4'):
                     ui.label('Результаты игры').classes(
                         'text-xl font-bold mb-3 text-center text-indigo-600 dark:text-indigo-400')
 
@@ -657,7 +657,7 @@ class ChameleonGameUI:
         self.game_container.clear()
 
         with self.game_container:
-            with ui.card().classes('w-full p-6 rounded-xl shadow-lg bg-white dark:bg-gray-800 text-center'):
+            with ui.card().classes('w-full p-6 rounded-xl shadow-lg bg-gray-100 dark:bg-gray-800 text-center'):
                 ui.label('Игра завершена!').classes('text-2xl font-bold mb-4 text-indigo-600 dark:text-indigo-400')
 
                 if chameleon_won:

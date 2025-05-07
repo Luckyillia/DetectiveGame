@@ -1,8 +1,8 @@
 {
-  "chameleon_4728": {
-    "room_id": "chameleon_4728",
-    "created_at": 1746653057,
-    "last_activity": 1746656860,
+  "chameleon_9391": {
+    "room_id": "chameleon_9391",
+    "created_at": 1746657829,
+    "last_activity": 1746657887,
     "status": "playing",
     "host_id": "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae",
     "players": [
@@ -10,33 +10,33 @@
         "id": "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae",
         "name": "lucky_illia",
         "is_host": true,
-        "joined_at": 1746653057,
+        "joined_at": 1746657829,
+        "last_action": 1746657882,
         "is_ready": true
       },
       {
         "id": "6b652e65-7cf9-4377-8031-192076a4e125",
         "name": "test",
         "is_host": false,
-        "joined_at": 1746653083,
+        "joined_at": 1746657837,
+        "last_action": 1746657882,
         "is_ready": false
       },
       {
         "id": "68d50bda-7a0c-43b4-a5a6-178693f37a3c",
         "name": "Хаха",
         "is_host": false,
-        "joined_at": 1746653103,
+        "joined_at": 1746657858,
+        "last_action": 1746657882,
         "is_ready": false
       }
     ],
     "game_data": {
-      "category": "Инструменты",
-      "word": "Гаечный ключ",
-      "chameleon_index": 0,
+      "category": "Города",
+      "word": "Рим",
+      "chameleon_index": 2,
       "descriptions": [],
-      "votes": {
-        "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae": "68d50bda-7a0c-43b4-a5a6-178693f37a3c",
-        "6b652e65-7cf9-4377-8031-192076a4e125": "68d50bda-7a0c-43b4-a5a6-178693f37a3c"
-      },
+      "votes": {},
       "round": 2,
       "current_player_index": 0
     }
