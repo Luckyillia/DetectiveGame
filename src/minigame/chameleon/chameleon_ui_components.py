@@ -44,124 +44,97 @@ class ChameleonComponents:
     def create_player_table(players, current_round=0, current_user_id=None, vote_handler=None, votes=None,
                             chameleon_index=None):
         """
-        Создает таблицу игроков с соответствующим содержимым в зависимости от этапа игры
+        Creates a player table with appropriate content
 
         Args:
-            players: Список игроков
-            current_round: Текущий раунд игры (0-3)
-            current_user_id: ID текущего пользователя
-            vote_handler: Обработчик событий голосования
-            votes: Словарь голосов (ключ - ID игрока, значение - ID игрока, за которого отдан голос)
-            chameleon_index: Индекс игрока-Хамелеона
+            players: List of players
+            current_round: Current game round (0-3)
+            current_user_id: ID of the current user
+            vote_handler: Handler for voting events
+            votes: Dictionary of votes (key - player ID, value - ID of the player the vote was cast for)
+            chameleon_index: Index of the chameleon player
         """
-        # Определяем колонки для таблицы
-        columns = [
-            {'name': 'index', 'label': '№', 'field': 'index', 'align': 'center', 'width': '50px'},
-            {'name': 'name', 'label': 'Имя', 'field': 'name', 'align': 'left'},
-        ]
+        # Create a container for the player cards
+        container = ui.column().classes('w-full gap-2')
 
-        # Добавляем колонку со статусом для комнаты ожидания
-        if current_round == 0:
-            columns.append({'name': 'status', 'label': 'Статус', 'field': 'status', 'align': 'center'})
-            columns.append(
-                {'name': 'last_action', 'label': 'Последнее действие', 'field': 'last_action', 'align': 'center'})
-
-        # Добавляем колонку голосов для режима голосования и результатов
-        if current_round >= 2:
-            columns.append({'name': 'votes', 'label': 'Голосов', 'field': 'votes', 'align': 'center'})
-
-        # Добавляем колонку для роли в режиме результатов
-        if current_round == 3:
-            columns.append({'name': 'role', 'label': 'Роль', 'field': 'role', 'align': 'center'})
-
-        # Если в режиме голосования, добавляем колонку для кнопок голосования
-        if current_round == 2:
-            columns.append({'name': 'action', 'label': 'Действие', 'field': 'action', 'align': 'center'})
-
-        # Создаем строки данных
-        rows = []
-
-        # Подсчитываем голоса для каждого игрока
+        # Count votes for each player
         vote_counts = {}
         if votes and current_round >= 2:
             for voted_id in votes.values():
                 vote_counts[voted_id] = vote_counts.get(voted_id, 0) + 1
 
-        # Формируем строки данных
+        # Create a card for each player
         for i, player in enumerate(players):
-            # Базовая информация о игроке
-            row = {
-                'id': player.get('id', ''),  # Нужно для логики голосования
-                'index': str(i + 1),
-                'name': player.get('name', 'Неизвестный игрок'),
-            }
+            player_id = player.get('id', '')
+            player_name = player.get('name', 'Неизвестный игрок')
+            is_host = player.get('is_host', False)
+            is_ready = player.get('is_ready', False)
+            player_index = i + 1
 
-            # Добавляем статус для комнаты ожидания
-            if current_round == 0:
-                status_items = []
-                if player.get("is_host", False):
-                    status_items.append("👑 Ведущий")
-                if player.get("is_ready", False):
-                    status_items.append("✅ Готов")
-                else:
-                    status_items.append("⏳ Не готов")
-                row['status'] = ", ".join(status_items)
+            with ui.card().classes('w-full p-3 flex flex-col gap-2') as container:
+                # Header with player number and name
+                with ui.row().classes('w-full items-center justify-between'):
+                    with ui.row().classes('items-center gap-2'):
+                        ui.label(f"{player_index}").classes(
+                            'font-bold bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded-full')
+                        ui.label(player_name).classes('font-bold text-lg')
 
-                # Добавляем время последнего действия
-                last_action_time = player.get("last_action", player.get("joined_at", 0))
-                if last_action_time:
-                    formatted_time = datetime.fromtimestamp(last_action_time).strftime("%H:%M:%S")
-                    row['last_action'] = formatted_time
-                else:
-                    row['last_action'] = "—"
+                    # Status icons - shown in waiting room
+                    if current_round == 0:
+                        with ui.row().classes('gap-2'):
+                            if is_host:
+                                ui.label('👑').tooltip('Ведущий')
+                            if is_ready:
+                                ui.label('✅').tooltip('Готов')
+                            else:
+                                ui.label('⏳').tooltip('Не готов')
 
-            # Добавляем количество голосов для режимов голосования и результатов
-            if current_round >= 2:
-                row['votes'] = str(vote_counts.get(player.get('id', ''), 0))
+                # Second row with additional info based on game state
+                with ui.row().classes('w-full items-center justify-between'):
+                    # Last action time - only in waiting room
+                    if current_round == 0:
+                        last_action_time = player.get("last_action", player.get("joined_at", 0))
+                        if last_action_time:
+                            formatted_time = datetime.fromtimestamp(last_action_time).strftime("%H:%M:%S")
+                            ui.label(f"Последнее действие: {formatted_time}").classes('text-sm text-gray-500')
 
-            # Добавляем роль для режима результатов
-            if current_round == 3 and chameleon_index is not None:
-                is_chameleon = (i == chameleon_index)
-                row['role'] = 'Хамелеон' if is_chameleon else 'Обычный игрок'
+                    # Vote count - in voting and results modes
+                    if current_round >= 2:
+                        vote_count = vote_counts.get(player_id, 0)
+                        ui.label(f"Голосов: {vote_count}").classes('text-sm font-medium')
 
-            rows.append(row)
+                    # Role - only in results mode
+                    if current_round == 3 and chameleon_index is not None:
+                        is_chameleon = (i == chameleon_index)
+                        role_text = 'Хамелеон' if is_chameleon else 'Обычный игрок'
+                        ui.label(role_text).classes(
+                            'font-medium px-2 py-1 rounded-full ' +
+                            (
+                                'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' if is_chameleon else
+                                'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200')
+                        )
 
-        # Создаем таблицу
-        table = ui.table(columns=columns, rows=rows).classes('w-full').props('flat bordered')
+                # Voting buttons - only in voting mode
+                if current_round == 2 and vote_handler:
+                    # Check if current user has voted
+                    has_voted = votes and current_user_id in votes
 
-        # Если в режиме голосования, добавляем кнопки голосования
-        if current_round == 2 and vote_handler and current_user_id:
-            # Проверяем, голосовал ли уже текущий пользователь
-            has_voted = current_user_id in (votes or {})
-
-            if has_voted:
-                voted_for_id = votes.get(current_user_id)
-
-                # Показываем ячейки с информацией о голосовании
-                for i, player in enumerate(players):
-                    player_id = player.get('id', '')
-                    with table.add_slot('body-cell-action',
-                                        f"{{row: {{index: '{i + 1}', name: '{player['name']}', votes: '{vote_counts.get(player_id, 0)}'}}}}"):
-                        if player_id == voted_for_id:
-                            ui.label('Вы проголосовали ✓').classes('text-green-600 dark:text-green-400 font-medium')
+                    # Only show voting option for other players
+                    if player_id != current_user_id:
+                        # If user already voted, show who they voted for
+                        if has_voted:
+                            voted_for_id = votes.get(current_user_id)
+                            if player_id == voted_for_id:
+                                ui.label('Вы проголосовали за этого игрока ✓').classes(
+                                    'text-green-600 font-medium text-center w-full')
+                        # Otherwise show voting button
                         else:
-                            ui.label('')
-            else:
-                # Показываем кнопки для голосования
-                for i, player in enumerate(players):
-                    player_id = player.get('id', '')
-                    with table.add_slot('body-cell-action',
-                                        f"{{row: {{index: '{i + 1}', name: '{player['name']}', votes: '{vote_counts.get(player_id, 0)}'}}}}"):
-                        if player_id != current_user_id:
-                            ui.button(
-                                'Голосовать',
-                                icon='how_to_vote',
-                                on_click=lambda pid=player_id: vote_handler(pid)
-                            ).props('size=sm color=primary')
-                        else:
-                            ui.label('Нельзя голосовать за себя').classes('text-gray-500 dark:text-gray-400 text-sm')
+                            ui.button('Голосовать', icon='how_to_vote',
+                                      on_click=lambda pid=player_id: vote_handler(pid)).classes('w-full')
+                    else:
+                        ui.label('Вы не можете голосовать за себя').classes('text-gray-500 italic text-center w-full')
 
-        return table
+        return container
 
     @staticmethod
     def create_word_grid(category, words):
@@ -249,12 +222,16 @@ class ChameleonComponents:
 
     @staticmethod
     def create_game_result_card(chameleon_caught, chameleon_name, word):
-        """Создает карточку с результатами игры"""
+        """Creates a card with game results"""
         if chameleon_caught:
             with ui.card().classes('bg-green-100 dark:bg-green-900 p-4 mb-4 rounded-lg'):
                 ui.label(f'Хамелеон ({chameleon_name}) был пойман!').classes(
                     'text-center text-green-700 dark:text-green-300 font-bold text-lg mb-2')
-                ui.label('Поздравляем! Команда игроков победила.').classes(
+
+                # The chameleon can still win if they correctly guess the word,
+                # but this is shown separately in the UI via the guess form.
+                # Here we only show that they were caught.
+                ui.label('Хамелеон был идентифицирован! Теперь всё зависит от его догадки.').classes(
                     'text-center text-green-800 dark:text-green-200')
                 ui.label(f'Загаданное слово было: {word}').classes('text-center mt-2')
         else:

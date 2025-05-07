@@ -2,7 +2,7 @@
   "chameleon_9391": {
     "room_id": "chameleon_9391",
     "created_at": 1746657829,
-    "last_activity": 1746657887,
+    "last_activity": 1746659404,
     "status": "playing",
     "host_id": "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae",
     "players": [
@@ -11,7 +11,7 @@
         "name": "lucky_illia",
         "is_host": true,
         "joined_at": 1746657829,
-        "last_action": 1746657882,
+        "last_action": 1746659350,
         "is_ready": true
       },
       {
@@ -19,7 +19,7 @@
         "name": "test",
         "is_host": false,
         "joined_at": 1746657837,
-        "last_action": 1746657882,
+        "last_action": 1746659350,
         "is_ready": false
       },
       {
@@ -27,13 +27,13 @@
         "name": "Хаха",
         "is_host": false,
         "joined_at": 1746657858,
-        "last_action": 1746657882,
-        "is_ready": false
+        "last_action": 1746659350,
+        "is_ready": true
       }
     ],
     "game_data": {
-      "category": "Города",
-      "word": "Рим",
+      "category": "Животные",
+      "word": "Волк",
       "chameleon_index": 2,
       "descriptions": [],
       "votes": {},
