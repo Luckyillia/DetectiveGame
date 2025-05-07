@@ -4,6 +4,7 @@ from src.game.game_room_management import GameRoomManagement
 from src.game.admin_game_ui import AdminGameUI
 from src.game.game_room_management_ui import GameRoomManagementUI
 from src.game.game_ui import GameUI
+from src.minigame.mini_game_ui import MiniGamesUI
 from src.services.log_services import LogService
 from src.services.user_profile import UserProfile
 from src.ui.components.user_table import UserTable
@@ -22,6 +23,7 @@ class UserUI:
         self.log_services = LogService()
         self.game_room_management = GameRoomManagement(game_ui=self.game_ui)
         self.game_room_management_ui = GameRoomManagementUI()
+        self.mini_games_ui = MiniGamesUI()
         self.game_data = {}  # Store game data at class level
         self.switch_dark_mode(app.storage.user.get('dark_mode'))
         self.setup_ui()
@@ -35,6 +37,7 @@ class UserUI:
                 four = ui.tab('Управление играми')
                 five = ui.tab('Управление комнатами')
             six = ui.tab('Игра')
+            eight = ui.tab('Мини игры')
             seven = ui.tab('Профиль')
 
         # User info and logout button
@@ -59,6 +62,8 @@ class UserUI:
 
             with ui.tab_panel(six):
                 self.game_ui.show_game_interface
+            with ui.tab_panel(eight):
+                self.mini_games_ui.create_mini_games_ui()
             with ui.tab_panel(seven):
                 self.user_profile.show_profile_ui(app.storage.user.get('user_id'))
         self.check_and_request_email()
