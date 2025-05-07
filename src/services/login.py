@@ -141,7 +141,6 @@ def login(redirect_to: str = '/', error: str = None) -> Optional[RedirectRespons
         return RedirectResponse('/')
 
     with ui.card().classes('absolute-center w-96'):
-        ui.image("https://i.imgur.com/NyTjp3u.png").classes('w-64 mb-4')
         ui.label('Вход в систему').classes('text-xl font-bold text-center w-full my-4')
 
         if error:
