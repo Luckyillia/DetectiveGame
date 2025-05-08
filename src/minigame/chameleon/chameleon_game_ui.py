@@ -122,60 +122,77 @@ class ChameleonGameUI:
             self._create_available_rooms_list()
 
     def _create_available_rooms_list(self):
-        """Создает и отображает список доступных комнат"""
+        """Creates and displays a list of available rooms using consistent styling"""
         with ui.card().classes('w-full p-6 mt-4 rounded-xl shadow-lg bg-gray-100 dark:bg-gray-800'):
             ui.label('Доступные комнаты:').classes('text-xl font-bold mb-4 text-indigo-600 dark:text-indigo-400')
             rooms_container = ui.element('div').classes('w-full')
 
-            # Функция для обновления списка комнат
+            # Function to update the rooms list
             def update_rooms_list():
                 rooms_container.clear()
-
                 with rooms_container:
                     available_rooms = self.room_service.get_rooms_list()
 
                     if available_rooms:
-                        # Создаем таблицу комнат
+                        # Create rows for the table
+                        rows = []
+                        for i, room in enumerate(available_rooms):
+                            rows.append({
+                                'id': room['room_id'],
+                                'room_id': room['room_id'],
+                                'host_name': room['host_name'],
+                                'player_count': room['player_count'],
+                                'created_at': datetime.fromtimestamp(room['created_at']).strftime('%H:%M:%S')
+                            })
+
+                        # Define columns in the same style as player table
                         columns = [
                             {'name': 'room_id', 'label': 'ID комнаты', 'field': 'room_id', 'align': 'center'},
                             {'name': 'host_name', 'label': 'Создатель', 'field': 'host_name', 'align': 'center'},
                             {'name': 'player_count', 'label': 'Игроков', 'field': 'player_count', 'align': 'center'},
+                            {'name': 'created_at', 'label': 'Создана', 'field': 'created_at', 'align': 'center'},
                             {'name': 'action', 'label': 'Действие', 'field': 'action', 'align': 'center'},
                         ]
 
-                        # Подготавливаем данные для строк
-                        rows = []
-                        for room in available_rooms:
-                            rows.append({
-                                'room_id': room['room_id'],
-                                'host_name': room['host_name'],
-                                'player_count': str(room['player_count']),
-                                'action': ''  # Будем добавлять кнопку через слот
-                            })
+                        # Create the table with unified styling
+                        table = ui.table(
+                            columns=columns,
+                            rows=rows,
+                            row_key='id',
+                            column_defaults={'align': 'center', 'headerClasses': 'uppercase text-primary'}
+                        ).classes('w-full')
 
-                        # Создаем таблицу
-                        with ui.table(columns=columns, rows=rows).classes('w-full').props(
-                                'flat bordered card-container') as table:
-                            # Добавляем кнопки через слот
-                            for i, room in enumerate(available_rooms):
-                                room_id = room['room_id']
-                                with table.add_slot('body-cell-action',
-                                                    f"{{row: {{room_id: '{room_id}', host_name: '{room['host_name']}', player_count: '{room['player_count']}' }}}}"):
-                                    ui.button(
-                                        'Присоединиться',
-                                        icon='login',
-                                        on_click=lambda r=room_id: self.join_game(r)
-                                    ).props('size=sm color=primary')
+                        # Add custom body slot for action buttons
+                        table.add_slot('body', '''
+                            <q-tr :props="props">
+                                <q-td v-for="col in props.cols" :key="col.name" :props="props" class="text-center">
+                                    <template v-if="col.name === 'action'">
+                                        <div class="flex justify-center">
+                                            <q-btn color="primary" dense icon="login" size="md"
+                                                   @click="() => $parent.$emit('join', props.row.room_id)">
+                                                Присоединиться
+                                            </q-btn>
+                                        </div>
+                                    </template>
+                                    <template v-else>
+                                        <span>{{ col.value }}</span>
+                                    </template>
+                                </q-td>
+                            </q-tr>
+                        ''')
+
+                        # Add handler for join event
+                        table.on('join', lambda e: self.join_game(e.args))
                     else:
                         with ui.card().classes('w-full p-4 bg-gray-200 dark:bg-gray-700 rounded-lg'):
                             with ui.row().classes('items-center justify-center text-gray-500 dark:text-gray-400'):
                                 ui.icon('info').classes('text-xl mr-2')
                                 ui.label('Нет доступных комнат').classes('text-center')
 
-            # Обновляем список комнат
+            # Update the rooms list
             update_rooms_list()
 
-            # Запускаем таймер обновления списка комнат (каждые 5 секунд)
+            # Start timer to update the rooms list (every 5 seconds)
             self.rooms_update_timer = ui.timer(5.0, update_rooms_list)
 
     def _cancel_timers(self):
@@ -535,29 +552,30 @@ class ChameleonGameUI:
                     chameleon_index=room_data["game_data"].get("chameleon_index") if current_round == 3 else None
                 )
 
-            # Раунд результатов (только в раунде 3)
+            # Отображаем результаты голосования в раунде 3
             if current_round == 3:
                 vote_results = self.room_service.get_vote_results(self.current_room_id)
 
                 with ui.card().classes('w-full p-6 rounded-xl shadow-lg bg-gray-100 dark:bg-gray-800 mb-4'):
-                    ui.label('Результаты игры').classes(
+                    ui.label('Результаты голосования').classes(
                         'text-xl font-bold mb-3 text-center text-indigo-600 dark:text-indigo-400')
 
                     if not vote_results:
                         ui.label('Ошибка получения результатов').classes('text-center p-4 text-red-500')
                     else:
-                        # Определяем, кто победил
+                        # Получаем данные о Хамелеоне
                         chameleon_index = room_data["game_data"]["chameleon_index"]
                         chameleon_player = room_data["players"][chameleon_index] if 0 <= chameleon_index < len(
                             room_data["players"]) else None
+                        chameleon_name = chameleon_player["name"] if chameleon_player else "Unknown"
 
+                        # Показываем результаты голосования
                         if vote_results["chameleon_caught"]:
-                            chameleon_name = chameleon_player["name"] if chameleon_player else "Unknown"
-                            self.components.create_game_result_card(
-                                True,
-                                chameleon_name,
-                                room_data["game_data"]["word"]
-                            )
+                            with ui.card().classes('bg-yellow-100 dark:bg-yellow-900 p-4 mb-4 rounded-lg'):
+                                ui.label(f'Игрок {chameleon_name} получил больше всего голосов!').classes(
+                                    'text-center font-bold mb-2 text-yellow-700 dark:text-yellow-300')
+                                ui.label('Хамелеон пойман! Теперь он должен попытаться угадать слово.').classes(
+                                    'text-center text-yellow-800 dark:text-yellow-200')
 
                             # Если текущий игрок - Хамелеон, показываем ему форму для угадывания
                             if is_chameleon:
@@ -600,16 +618,17 @@ class ChameleonGameUI:
                                 ui.label('Ожидайте, пока Хамелеон попытается угадать слово...').classes(
                                     'text-center mt-2 italic')
                         else:
-                            chameleon_name = chameleon_player["name"] if chameleon_player else "Unknown"
-                            self.components.create_game_result_card(
-                                False,
-                                chameleon_name,
-                                room_data["game_data"]["word"]
-                            )
+                            with ui.card().classes('bg-green-100 dark:bg-green-900 p-4 mb-4 rounded-lg'):
+                                ui.label(f'Хамелеон ({chameleon_name}) не был пойман!').classes(
+                                    'text-center font-bold mb-2 text-green-700 dark:text-green-300')
+                                ui.label('Хамелеон победил не будучи раскрытым!').classes(
+                                    'text-center text-green-800 dark:text-green-200')
 
-                            ui.button('Завершить игру', icon='check_circle',
-                                      on_click=lambda: self.finish_game()).classes(
-                                'w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white')
+                                # Кнопка показа финальных результатов напрямую вызывает show_game_over
+                                ui.button('Показать итоги игры', icon='check_circle',
+                                          on_click=lambda: self.show_game_over(True,
+                                                                               room_data["game_data"]["word"])).classes(
+                                    'w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white')
 
             # Кнопка выхода
             ui.button('Выйти из игры', icon='exit_to_app', on_click=self.leave_game).classes(
