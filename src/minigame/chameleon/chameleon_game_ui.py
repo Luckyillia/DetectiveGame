@@ -412,10 +412,16 @@ class ChameleonGameUI:
             self.show_main_menu()
             return
 
-        # Если статус изменился, обновляем экран
-        if room_data["status"] == "playing" and room_data.get("last_activity", 0) > self.last_update_time:
+        # Если статус изменился на playing, переходим на экран игры
+        if room_data["status"] == "playing":
             self.last_update_time = room_data.get("last_activity", 0)
             self.show_game_screen()
+            return
+
+        # Проверяем, было ли обновление данных комнаты
+        if room_data.get("last_activity", 0) > self.last_update_time:
+            self.last_update_time = room_data.get("last_activity", 0)
+            self.show_waiting_room()
             return
 
     def toggle_ready(self):
@@ -546,9 +552,10 @@ class ChameleonGameUI:
                             room_data["players"]) else None
 
                         if vote_results["chameleon_caught"]:
+                            chameleon_name = chameleon_player["name"] if chameleon_player else "Unknown"
                             self.components.create_game_result_card(
                                 True,
-                                chameleon_player["name"],
+                                chameleon_name,
                                 room_data["game_data"]["word"]
                             )
 
@@ -593,9 +600,10 @@ class ChameleonGameUI:
                                 ui.label('Ожидайте, пока Хамелеон попытается угадать слово...').classes(
                                     'text-center mt-2 italic')
                         else:
+                            chameleon_name = chameleon_player["name"] if chameleon_player else "Unknown"
                             self.components.create_game_result_card(
                                 False,
-                                chameleon_player["name"],
+                                chameleon_name,
                                 room_data["game_data"]["word"]
                             )
 
@@ -731,3 +739,4 @@ class ChameleonGameUI:
         # Удаляем ID комнаты из хранилища пользователя
         app.storage.user.update({'chameleon_room_id': None})
         self.show_main_menu()
+

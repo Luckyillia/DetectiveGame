@@ -44,7 +44,7 @@ class ChameleonComponents:
     def create_player_table(players, current_round=0, current_user_id=None, vote_handler=None, votes=None,
                             chameleon_index=None):
         """
-        Creates a player table with appropriate content
+        Creates a player table similar to the UserTable implementation
 
         Args:
             players: List of players
@@ -54,8 +54,32 @@ class ChameleonComponents:
             votes: Dictionary of votes (key - player ID, value - ID of the player the vote was cast for)
             chameleon_index: Index of the chameleon player
         """
-        # Create a container for the player cards
-        container = ui.column().classes('w-full gap-2')
+        # Define columns for the table based on current round
+        columns = [
+            {'name': 'index', 'label': '№', 'field': 'index', 'align': 'center', 'width': '50px'},
+            {'name': 'name', 'label': 'Имя игрока', 'field': 'name', 'align': 'center'}
+        ]
+
+        # Add status column for waiting room
+        if current_round == 0:
+            columns.append({'name': 'status', 'label': 'Статус', 'field': 'status', 'align': 'center'})
+            columns.append(
+                {'name': 'last_action', 'label': 'Последнее действие', 'field': 'last_action', 'align': 'center'})
+
+        # Add vote count column for voting and results
+        if current_round >= 2:
+            columns.append({'name': 'votes', 'label': 'Голосов', 'field': 'votes', 'align': 'center'})
+
+        # Add role column for results
+        if current_round == 3:
+            columns.append({'name': 'role', 'label': 'Роль', 'field': 'role', 'align': 'center'})
+
+        # Add action column for voting
+        if current_round == 2:
+            columns.append({'name': 'action', 'label': 'Действие', 'field': 'action', 'align': 'center'})
+
+        # Create rows array
+        rows = []
 
         # Count votes for each player
         vote_counts = {}
@@ -63,78 +87,122 @@ class ChameleonComponents:
             for voted_id in votes.values():
                 vote_counts[voted_id] = vote_counts.get(voted_id, 0) + 1
 
-        # Create a card for each player
+        # Prepare rows with all necessary data
         for i, player in enumerate(players):
             player_id = player.get('id', '')
             player_name = player.get('name', 'Неизвестный игрок')
             is_host = player.get('is_host', False)
             is_ready = player.get('is_ready', False)
-            player_index = i + 1
 
-            with ui.card().classes('w-full p-3 flex flex-col gap-2') as container:
-                # Header with player number and name
-                with ui.row().classes('w-full items-center justify-between'):
-                    with ui.row().classes('items-center gap-2'):
-                        ui.label(f"{player_index}").classes(
-                            'font-bold bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded-full')
-                        ui.label(player_name).classes('font-bold text-lg')
+            row = {
+                'id': player_id,
+                'index': i + 1,
+                'name': player_name
+            }
 
-                    # Status icons - shown in waiting room
-                    if current_round == 0:
-                        with ui.row().classes('gap-2'):
-                            if is_host:
-                                ui.label('👑').tooltip('Ведущий')
-                            if is_ready:
-                                ui.label('✅').tooltip('Готов')
-                            else:
-                                ui.label('⏳').tooltip('Не готов')
+            # Add status information for waiting room
+            if current_round == 0:
+                # Status icons
+                status = []
+                if is_host:
+                    status.append('👑 Ведущий')
+                if is_ready:
+                    status.append('✅ Готов')
+                else:
+                    status.append('⏳ Не готов')
+                row['status'] = ', '.join(status)
 
-                # Second row with additional info based on game state
-                with ui.row().classes('w-full items-center justify-between'):
-                    # Last action time - only in waiting room
-                    if current_round == 0:
-                        last_action_time = player.get("last_action", player.get("joined_at", 0))
-                        if last_action_time:
-                            formatted_time = datetime.fromtimestamp(last_action_time).strftime("%H:%M:%S")
-                            ui.label(f"Последнее действие: {formatted_time}").classes('text-sm text-gray-500')
+                # Last action time
+                last_action_time = player.get('last_action', player.get('joined_at', 0))
+                row['last_action'] = datetime.fromtimestamp(last_action_time).strftime(
+                    '%H:%M:%S') if last_action_time else '—'
 
-                    # Vote count - in voting and results modes
-                    if current_round >= 2:
-                        vote_count = vote_counts.get(player_id, 0)
-                        ui.label(f"Голосов: {vote_count}").classes('text-sm font-medium')
+            # Add vote count for voting and results
+            if current_round >= 2:
+                row['votes'] = vote_counts.get(player_id, 0)
 
-                    # Role - only in results mode
-                    if current_round == 3 and chameleon_index is not None:
-                        is_chameleon = (i == chameleon_index)
-                        role_text = 'Хамелеон' if is_chameleon else 'Обычный игрок'
-                        ui.label(role_text).classes(
-                            'font-medium px-2 py-1 rounded-full ' +
-                            (
-                                'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' if is_chameleon else
-                                'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200')
-                        )
+            # Add role for results
+            if current_round == 3 and chameleon_index is not None:
+                is_chameleon = (i == chameleon_index)
+                row['role'] = 'Хамелеон' if is_chameleon else 'Обычный игрок'
+                row['is_chameleon'] = is_chameleon  # Used in template
 
-                # Voting buttons - only in voting mode
-                if current_round == 2 and vote_handler:
-                    # Check if current user has voted
-                    has_voted = votes and current_user_id in votes
+            # Add to rows
+            rows.append(row)
 
-                    # Only show voting option for other players
-                    if player_id != current_user_id:
-                        # If user already voted, show who they voted for
-                        if has_voted:
-                            voted_for_id = votes.get(current_user_id)
-                            if player_id == voted_for_id:
-                                ui.label('Вы проголосовали за этого игрока ✓').classes(
-                                    'text-green-600 font-medium text-center w-full')
-                        # Otherwise show voting button
-                        else:
-                            ui.button('Голосовать', icon='how_to_vote',
-                                      on_click=lambda pid=player_id: vote_handler(pid)).classes('w-full')
-                    else:
-                        ui.label('Вы не можете голосовать за себя').classes('text-gray-500 italic text-center w-full')
+        # Create table with row_key for proper row tracking
+        table = ui.table(
+            columns=columns,
+            rows=rows,
+            row_key='id',
+            column_defaults={'align': 'center', 'headerClasses': 'uppercase text-primary'}
+        ).classes('w-full')
 
-        return container
+        # Add custom body slot for conditional rendering
+        body_template = '''
+        <q-tr :props="props">
+            <q-td v-for="col in props.cols" :key="col.name" :props="props" class="text-center">
+                <!-- Status display -->
+                <template v-if="col.name === 'status'">
+                    <div class="flex justify-center items-center gap-2">
+                        <span>{{ col.value }}</span>
+                    </div>
+                </template>
+
+                <!-- Vote count display -->
+                <template v-else-if="col.name === 'votes'">
+                    <div class="font-medium">
+                        {{ col.value }}
+                    </div>
+                </template>
+
+                <!-- Role display with proper styling -->
+                <template v-else-if="col.name === 'role'">
+                    <div :class="[
+                        props.row.is_chameleon 
+                            ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' 
+                            : 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+                        'px-2 py-1 rounded-full font-medium inline-block'
+                    ]">
+                        {{ col.value }}
+                    </div>
+                </template>
+
+                <!-- Action buttons for voting -->
+                <template v-else-if="col.name === 'action'">
+                    <div class="flex justify-center">
+                        <div v-if="props.row.id === '%s'">
+                            <span class="text-gray-500 dark:text-gray-400 text-sm">Нельзя голосовать за себя</span>
+                        </div>
+                        <div v-else>
+                            <q-btn v-if="!%s" color="primary" dense icon="how_to_vote" size="md"
+                                   @click="() => $parent.$emit('vote', props.row.id)">Голосовать</q-btn>
+                            <span v-else-if="props.row.id === '%s'" class="text-green-600 dark:text-green-400 font-medium">
+                                Вы проголосовали ✓
+                            </span>
+                        </div>
+                    </div>
+                </template>
+
+                <!-- Default column display -->
+                <template v-else>
+                    <span>{{ col.value }}</span>
+                </template>
+            </q-td>
+        </q-tr>
+        ''' % (
+            current_user_id or '',  # Current user ID for self-vote check
+            str(bool(votes and current_user_id in votes)).lower(),  # Has voted check
+            votes.get(current_user_id, '') if votes and current_user_id in votes else ''  # Voted for ID
+        )
+
+        table.add_slot('body', body_template)
+
+        # Add handler for vote event
+        if current_round == 2 and vote_handler:
+            table.on('vote', lambda e: vote_handler(e.args))
+
+        return table
 
     @staticmethod
     def create_word_grid(category, words):

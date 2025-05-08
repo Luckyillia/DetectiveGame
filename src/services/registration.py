@@ -177,7 +177,7 @@ class Registration:
 
     def hide_error(self):
         """Hide error message"""
-        self.error_label.classes.add('hidden')
+        self.error_label.classes('hidden')
 
     def add_user(self, redirect_to: str = '/'):
         # Hide previous error if any

@@ -1,43 +1,47 @@
 {
-  "chameleon_9391": {
-    "room_id": "chameleon_9391",
-    "created_at": 1746657829,
-    "last_activity": 1746659404,
-    "status": "playing",
+  "chameleon_4397": {
+    "room_id": "chameleon_4397",
+    "created_at": 1746714283,
+    "last_activity": 1746715044,
+    "status": "finished",
     "host_id": "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae",
     "players": [
       {
         "id": "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae",
         "name": "lucky_illia",
         "is_host": true,
-        "joined_at": 1746657829,
-        "last_action": 1746659350,
+        "joined_at": 1746714283,
+        "last_action": 1746715044,
         "is_ready": true
       },
       {
         "id": "6b652e65-7cf9-4377-8031-192076a4e125",
         "name": "test",
         "is_host": false,
-        "joined_at": 1746657837,
-        "last_action": 1746659350,
-        "is_ready": false
+        "joined_at": 1746714897,
+        "last_action": 1746715018,
+        "is_ready": true
       },
       {
         "id": "68d50bda-7a0c-43b4-a5a6-178693f37a3c",
         "name": "Хаха",
         "is_host": false,
-        "joined_at": 1746657858,
-        "last_action": 1746659350,
-        "is_ready": true
+        "joined_at": 1746714974,
+        "last_action": 1746715022,
+        "is_ready": false
       }
     ],
     "game_data": {
       "category": "Животные",
-      "word": "Волк",
-      "chameleon_index": 2,
+      "word": "Обезьяна",
+      "chameleon_index": 0,
       "descriptions": [],
-      "votes": {},
-      "round": 2,
+      "votes": {
+        "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae": "6b652e65-7cf9-4377-8031-192076a4e125",
+        "6b652e65-7cf9-4377-8031-192076a4e125": "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae",
+        "68d50bda-7a0c-43b4-a5a6-178693f37a3c": "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae"
+      },
+      "round": 3,
       "current_player_index": 0
     }
   }
