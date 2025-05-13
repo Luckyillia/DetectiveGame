@@ -213,12 +213,10 @@ class ChameleonComponents:
             category: Название категории
             words: Список слов для отображения
         """
-        # Убеждаемся, что у нас достаточно слов для сетки 4x4
-        while len(words) < 16:
-            words.append("")
+        # Создаем копию списка слов, чтобы не изменять оригинал
+        grid_words = words.copy() if words else []
 
-        # Перемешиваем слова для случайного распределения
-        random.shuffle(words)
+        # НЕ перемешиваем слова здесь! Используем те, что пришли
 
         # Создаем список букв и цифр для сетки
         letters = list(string.ascii_uppercase)[:4]  # A-D
@@ -251,10 +249,11 @@ class ChameleonComponents:
                             cell_id = f"{letters[col]}{number}"
 
                             # Берем слово из списка
-                            word = words[word_index] if word_index < len(words) else ""
+                            word = grid_words[word_index] if word_index < len(grid_words) else "---"
 
-                            with ui.card().classes(
-                                    'p-2 min-h-12 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-md shadow hover:shadow-md transition-shadow'):
+                            # Используем простой контейнер вместо карточки с эффектами наведения
+                            with ui.element('div').classes(
+                                    'p-2 min-h-12 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-md'):
                                 ui.label(word).classes(
                                     'text-sm font-medium text-center text-gray-800 dark:text-gray-200')
 

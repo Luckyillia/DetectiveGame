@@ -206,7 +206,7 @@ class ChameleonRoomService:
             room["players"][0]["is_host"] = True
             room["host_id"] = room["players"][0]["id"]
             room["players"][0]["last_action"] = current_time
-
+            
         success = self.save_rooms(rooms)
 
         if success:
@@ -260,7 +260,7 @@ class ChameleonRoomService:
 
         return all(player.get("is_ready", False) for player in room["players"])
 
-    def start_game(self, room_id, category, word):
+    def start_game(self, room_id, category, word, grid_words=None):
         """Начинает игру в комнате."""
         rooms = self.load_rooms()
         if room_id not in rooms:
@@ -285,6 +285,11 @@ class ChameleonRoomService:
         room["game_data"]["votes"] = {}
         room["game_data"]["round"] = 1
         room["game_data"]["current_player_index"] = 0
+
+        # Сохраняем сетку слов для стабильного отображения
+        if grid_words:
+            room["game_data"]["grid_words"] = grid_words
+
         room["last_activity"] = current_time
 
         # Обновляем время действия для всех игроков

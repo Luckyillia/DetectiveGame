@@ -373,11 +373,23 @@ class ChameleonGameUI:
                                     ui.notify('Выберите категорию', type='negative')
                                     return
 
-                                # Получаем случайное слово из выбранной категории
-                                word = random.choice(self.data_service.get_words_for_category(category_select.value))
+                                # Получаем все слова для категории
+                                category_words = self.data_service.get_words_for_category(category_select.value)
+
+                                # Выбираем случайное слово
+                                word = random.choice(category_words)
                                 if not word:
                                     ui.notify('Не удалось выбрать слово', type='negative')
                                     return
+
+                                # Подготавливаем сетку слов
+                                grid_words = category_words.copy()
+                                random.shuffle(grid_words)
+
+                                # Добавляем плейсхолдеры для заполнения сетки 4x4
+                                grid_words_with_placeholders = grid_words.copy()
+                                while len(grid_words_with_placeholders) < 16:
+                                    grid_words_with_placeholders.append("---")  # Используем тире вместо пустых строк
 
                                 # Проверяем, достаточно ли игроков
                                 if len(room_data["players"]) < 3:
@@ -388,7 +400,8 @@ class ChameleonGameUI:
                                 success = self.room_service.start_game(
                                     self.current_room_id,
                                     category_select.value,
-                                    word
+                                    word,
+                                    grid_words_with_placeholders  # Передаем подготовленную сетку слов
                                 )
 
                                 if success:
@@ -535,7 +548,7 @@ class ChameleonGameUI:
                         'w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white')
 
             # Показываем сетку с буквами и цифрами для слов
-            words = self.data_service.get_words_for_category(category)
+            words = room_data["game_data"].get("grid_words", self.data_service.get_words_for_category(category))
             self.components.create_word_grid(category, words)
 
             # Список игроков с голосованием

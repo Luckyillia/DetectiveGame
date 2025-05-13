@@ -36,7 +36,7 @@ class UserUI:
                 three = ui.tab('Логи')
                 four = ui.tab('Управление играми')
                 five = ui.tab('Управление комнатами')
-            six = ui.tab('Игра')
+            six = ui.tab('Детектив')
             eight = ui.tab('Мини игры')
             seven = ui.tab('Профиль')
 

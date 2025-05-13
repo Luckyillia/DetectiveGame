@@ -32,7 +32,7 @@ class MiniGamesUI:
                     with ui.card().classes(
                             'p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors').on('click',
                                                                                                                 self.show_chameleon_game):
-                        ui.image('https://i.imgur.com/XsD0Gq5.png').classes('w-full h-40 object-cover rounded-lg mb-2')
+                        ui.image('https://game.city/static/media/theChameleon.419b43690de24a8b2287.png').classes('w-full h-50 object-cover rounded-lg mb-2')
                         ui.label('Хамелеон (Chameleon)').classes('text-xl font-bold mb-1')
                         ui.label('Социальная игра-детектив: найди кто из игроков не знает секретное слово!').classes(
                             'text-sm')
