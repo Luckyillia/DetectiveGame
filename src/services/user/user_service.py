@@ -32,6 +32,7 @@ class UserService:
             return []
 
     def write_data(self, users):
+        """Записывает данные пользователей в файл."""
         try:
             directory = os.path.dirname(self.file_name)
             if not os.path.exists(directory):
@@ -43,17 +44,30 @@ class UserService:
                 ensure_ascii=False
             )
 
+            # Записываем во временный файл
             temp_file_name = f"{self.file_name}.tmp"
             with open(temp_file_name, "w", encoding="utf-8") as temp_file:
                 temp_file.write(data_to_write)
+                temp_file.flush()  # Ensure data is written to disk
+                os.fsync(temp_file.fileno())  # Force filesystem sync
 
+            # Проверяем, что временный файл действительно создан
+            if not os.path.exists(temp_file_name) or os.path.getsize(temp_file_name) == 0:
+                return False
+
+            # Заменяем оригинальный файл временным
             os.replace(temp_file_name, self.file_name)
+
+            # Проверяем, что файл действительно обновлен
+            if not os.path.exists(self.file_name) or os.path.getsize(self.file_name) == 0:
+                return False
+
             return True
 
         except Exception as e:
+            print(f"Error writing user data: {str(e)}")
             self.log_service.add_error_log(
-                error_message="Ошибка записи данных пользователей",
-                metadata={"exception": str(e)}
+                error_message=f"Ошибка записи данных пользователей: {str(e)}"
             )
             return False
 
@@ -108,50 +122,40 @@ class UserService:
         return success
 
     def edit_user(self, user_id, new_data):
-        users = self.load_data()
-        for i, user in enumerate(users):
-            if user['id'] == user_id:
-                if 'id' in new_data and new_data['id'] != user_id:
-                    self.log_service.add_error_log(
-                        error_message="Попытка изменения ID пользователя",
-                        metadata={"user_id": user_id}
-                    )
-                    return False
+        """Редактирует данные пользователя."""
+        try:
+            # Загружаем текущие данные
+            users = self.load_data()
+            success = False
 
-                if 'username' in new_data and new_data['username'] != user['username']:
-                    if not self.is_username_available(new_data['username']):
-                        self.log_service.add_error_log(
-                            error_message="Попытка изменения на уже занятое имя пользователя",
-                            metadata={"new_username": new_data['username']}
-                        )
-                        return False
+            # Ищем пользователя для обновления
+            for i, user in enumerate(users):
+                if user['id'] == user_id:
 
-                # Если меняется пароль, хешируем его
-                if 'password' in new_data and new_data['password'] != user['password']:
-                    # Проверяем, не является ли пароль уже хешированным
-                    if '$' not in new_data['password']:
-                        # Проверяем сложность пароля
-                        password_check = self.password_service.check_password_strength(new_data['password'])
-                        if not password_check["valid"]:
-                            self.log_service.add_error_log(
-                                error_message="Новый пароль не соответствует требованиям безопасности",
-                                metadata={"password_errors": password_check["errors"]}
-                            )
-                            return False
-                        # Хешируем пароль
-                        new_data['password'] = self.password_service.hash_password(new_data['password'])
+                    # Сохраняем старые данные для лога
+                    old_data = {k: user.get(k) for k in new_data.keys()}
 
-                users[i] = {**user, **new_data}
-                success = self.write_data(users)
+                    # Обновляем данные пользователя
+                    for key, value in new_data.items():
+                        if key != 'id':  # Не даем изменить ID
+                            user[key] = value
 
-                if success:
-                    self.log_service.add_user_action_log(
-                        user_id=user_id,
-                        action="EDIT_USER_DATA",
-                        message="Данные пользователя успешно изменены"
-                    )
-                return success
-        return False
+                    success = True
+                    break
+
+            if not success:
+                return False
+
+            # Сохраняем все данные
+            return self.write_data(users)
+
+        except Exception as e:
+            print(f"Error editing user: {str(e)}")
+            self.log_service.add_error_log(
+                error_message=f"Ошибка при редактировании пользователя: {str(e)}",
+                metadata={"user_id": user_id}
+            )
+            return False
 
     def is_username_available(self, username):
         users = self.load_data()

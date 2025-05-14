@@ -317,7 +317,7 @@ class UserProfile:
                 self.form_elements['avatar_generator'].classes(remove='hidden')
         else:
             # Если сохраняем, проверяем и обновляем
-            if self.is_editing and not self.validate_and_save():
+            if not self.validate_and_save():
                 # Если проверка не прошла, остаемся в режиме редактирования
                 return
 
@@ -388,7 +388,8 @@ class UserProfile:
             'surname': self.form_elements['surname']['edit'].value.strip(),
             'username': self.form_elements['username']['edit'].value.strip(),
             'avatar': self.form_elements['avatar']['edit'].value.strip(),
-            'email': self.form_elements['email']['edit'].value.strip()
+            'email': self.form_elements['email']['edit'].value.strip() if self.form_elements['email'][
+                'edit'].value else None
         }
 
         # Проверка: Проверяем обязательные поля
@@ -409,6 +410,13 @@ class UserProfile:
             ui.notify('Некорректный формат email', type='negative')
             return False
 
+        # Force refresh user data before editing to avoid race conditions
+        fresh_user_data = self.user_service.get_user_by_id(self.current_user_id)
+        if not fresh_user_data:
+            ui.notify('Ошибка: Не удалось найти пользователя', type='negative')
+            return False
+
+
         # Если проверка пройдена, сохраняем данные
         success = self.user_service.edit_user(self.current_user_id, new_data)
 
@@ -416,24 +424,29 @@ class UserProfile:
             # Обновляем изображение аватара немедленно
             self.avatar_image.source = new_data['avatar']
 
-            # Обновляем сохраненные данные пользователя
-            self.current_user = self.get_user_by_id(self.current_user_id)
+            # Принудительно обновляем сохраненные данные пользователя
+            updated_user = self.user_service.get_user_by_id(self.current_user_id)
 
-            # Определяем, какие поля были изменены для записи в лог
-            changed_fields = {
-                field: new_data[field]
-                for field in new_data
-                if new_data[field] != self.current_user.get(field, '')
-            }
+            if updated_user:
+                self.current_user = updated_user
+
+                # Обновляем отображаемые значения
+                for field_name in ['name', 'surname', 'username', 'email']:
+                    if field_name in self.form_elements:
+                        self.form_elements[field_name]['view'].text = updated_user.get(field_name, '')
+
+                self.form_elements['avatar']['view'].text = new_data['avatar']
 
             # Записываем успешное обновление в лог
             self.log_service.add_user_action_log(
                 user_id=self.current_user_id,
                 action="PROFILE_UPDATE_SUCCESS",
                 message="Профиль успешно обновлен",
-                metadata={"changed_fields": list(changed_fields.keys())}
+                metadata={"updated_fields": list(new_data.keys())}
             )
 
+            # Принудительно обновляем UI с новым состоянием
+            ui.update()
             ui.notify('Профиль успешно обновлен', type='positive')
             return True
         else:

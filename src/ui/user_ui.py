@@ -33,7 +33,7 @@ class UserUI:
         ui.element('div').style(
             'position: fixed; top: 0; left: 0; width: 100%; height: 100%; '
             'background-image: url("https://i.imgur.com/wXW6uo7.png"); '
-            'background-size: cover; background-position: center; opacity: 0.8; z-index: -1;'
+            'background-size: cover; background-position: center; z-index: -1;'
         )
 
         with ui.tabs().classes('w-full') as tabs:
