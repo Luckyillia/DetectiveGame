@@ -43,13 +43,15 @@ class GameDialog:
         dialog.open()
 
     def show_newspaper_dialog(self, game_data):
-        with ui.dialog() as dialog, ui.card().classes('p-6 w-[600px] max-w-full'):
-            ui.label('Газета').classes('text-xl font-bold mb-4')
+        with ui.dialog() as dialog, ui.card().classes('p-0 w-[600px] max-w-full overflow-hidden'):
+            # Заголовок газеты с изображением
+            ui.image("https://i.imgur.com/SUYFT71.png").classes('w-full h-[256px] object-cover')
 
-            newspaper_text = game_data.get('gazeta', 'Газета пока пуста.')
-            ui.markdown(newspaper_text).classes('whitespace-pre-wrap text-base')
+            with ui.card_section().classes('p-6'):
+                newspaper_text = game_data.get('gazeta', 'Газета пока пуста.')
+                ui.markdown(newspaper_text).classes('whitespace-pre-wrap text-base')
 
-            ui.button('Закрыть', on_click=dialog.close).classes('mt-4 bg-gray-300')
+                ui.button('Закрыть', on_click=dialog.close).classes('mt-4 bg-gray-300')
         dialog.open()
 
 
@@ -67,22 +69,33 @@ class GameDialog:
             ui.notify('Нет активной игры', color='negative')
             return
 
-        # Создаем диалоговое окно
-        with ui.dialog() as dialog, ui.card().classes('p-6 w-96'):
-            ui.label('Куда хотите пойти?').classes('text-xl font-bold mb-4')
+        with ui.dialog() as dialog, ui.card().classes('p-0 w-full'):
+            # Основной контейнер с фоном
+            with ui.column().classes('relative w-full h-[500px] bg-cover bg-center').style('background-image: url(https://i.imgur.com/X2iR3yf.png)'):
+                # Затемнение фона
+                with ui.column().classes('absolute inset-0 bg-opacity-50 p-4'):
+                    ui.label('Куда хотите пойти?').classes('text-xl font-bold mb-4 text-white')
 
-            place_input = ui.input('Введите ID места').classes('w-full mb-4')
+                    # Поле ввода с прозрачным фоном
+                    with ui.row().classes('w-full mb-4'):
+                        place_input = ui.input('Введите ID места').props('dark outlined dense').classes(
+                            'w-full bg-white/30')
 
-            def try_travel():
+                    # Кнопки внизу
+                    with ui.row().classes('w-full justify-between mt-auto'):
+                        ui.button('Отмена', on_click=dialog.close).classes('bg-gray-600 text-white')
+                        ui.button('Пойти',
+                                  on_click=lambda: (
+                                      self.game_ui.travel_to_location(current_room_id, place_input.value),
+                                      dialog.close()
+                                  )).classes('bg-blue-500 text-white')
+
+            # Обработка Enter
+            def on_enter(e):
                 self.game_ui.travel_to_location(current_room_id, place_input.value)
                 dialog.close()
 
-            # Attach Enter key event to the input field
-            place_input.on('keydown.enter', try_travel)
-
-            with ui.row().classes('w-full justify-between'):
-                ui.button('Отмена', on_click=dialog.close).classes('bg-gray-300 dark:bg-gray-700')
-                ui.button('Пойти', on_click=try_travel).classes('bg-blue-500 text-white')
+            place_input.on('keydown.enter', on_enter)
 
         dialog.open()
 

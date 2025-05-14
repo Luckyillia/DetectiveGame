@@ -2,8 +2,8 @@ from nicegui import ui, app
 import os, json, time
 
 from src.game import GameStateService
-from src.services.user_service import UserService
-from src.services.log_services import LogService
+from src.services.user.user_service import UserService
+from src.services.log.log_services import LogService
 
 
 class GameRoomManagement:
@@ -101,20 +101,23 @@ class GameRoomManagement:
         game_ui.show_game_interface
 
     def show_join_game_dialog(self, game_ui):
-        with ui.dialog() as dialog, ui.card().classes('p-0 w-96 overflow-hidden rounded-xl'):
-            # Add detective office background
-            with ui.element('div').classes('relative w-full'):
-                # Background image with darkened overlay
-                ui.element('div').classes('absolute inset-0 bg-black bg-opacity-60')
-                ui.image("https://i.imgur.com/fSGMO72.jpg").classes('w-full object-cover opacity-40')
+        with ui.dialog() as dialog, ui.card().classes('p-0 w-full'):
+            # Основной контейнер с фоном
+            with ui.column().classes('items-center justify-center w-full h-[500px] bg-cover bg-center').style(
+                    'background-image: url(https://i.imgur.com/MjjNU7N.png)'):
 
-                # Content overlay
+                # Затемнение фона
+                ui.element('div').classes('absolute inset-0 bg-opacity-60')
+
+                # Контент поверх изображения
                 with ui.element('div').classes('relative z-10 p-6'):
                     ui.label('Присоединиться к игре').classes('text-xl font-bold mb-4 text-white text-center')
 
                     room_id_input = ui.input('Введите ID игры').classes('w-full mb-4 bg-white/30 text-white')
                     room_id_input.props('dark outlined')
                     status_label = ui.label('').classes('mt-2')
+
+                    # Остальной код метода без изменений...
 
                     def try_join():
                         room_id = room_id_input.value.strip()

@@ -5,7 +5,7 @@ from datetime import datetime
 
 from src.minigame.chameleon.chameleon_data_service import ChameleonDataService
 from src.minigame.chameleon.chameleon_room_service import ChameleonRoomService
-from src.services.log_services import LogService
+from src.services.log.log_services import LogService
 from src.minigame.chameleon.chameleon_ui_components import ChameleonComponents
 
 

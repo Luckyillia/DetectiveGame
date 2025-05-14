@@ -1,1 +1,28 @@
-{}
+{
+  "chameleon_6420": {
+    "room_id": "chameleon_6420",
+    "created_at": 1747158048,
+    "last_activity": 1747158048,
+    "status": "waiting",
+    "host_id": "68d50bda-7a0c-43b4-a5a6-178693f37a3c",
+    "players": [
+      {
+        "id": "68d50bda-7a0c-43b4-a5a6-178693f37a3c",
+        "name": "Хаха",
+        "is_host": true,
+        "joined_at": 1747158048,
+        "last_action": 1747158048,
+        "is_ready": true
+      }
+    ],
+    "game_data": {
+      "category": null,
+      "word": null,
+      "chameleon_index": -1,
+      "descriptions": [],
+      "votes": {},
+      "round": 0,
+      "current_player_index": 0
+    }
+  }
+}

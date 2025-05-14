@@ -2,7 +2,7 @@ import smtplib
 import os
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from src.services.log_services import LogService
+from src.services.log.log_services import LogService
 
 
 class EmailService:

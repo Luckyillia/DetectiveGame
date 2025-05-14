@@ -1,7 +1,7 @@
 from nicegui import ui, app
 
 from src.minigame.chameleon.chameleon_game_ui import ChameleonGameUI
-from src.services.log_services import LogService
+from src.services.log.log_services import LogService
 
 
 class MiniGamesUI:

@@ -1,11 +1,10 @@
 from nicegui import ui
 import random
 import string
-import time
 from datetime import datetime
 
-from src.services.user_service import UserService
-from src.services.log_services import LogService
+from src.services.user.user_service import UserService
+from src.services.log.log_services import LogService
 from src.services.password_service import PasswordService
 from src.game.game_room_management import GameRoomManagement
 

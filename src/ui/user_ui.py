@@ -5,11 +5,11 @@ from src.game.admin_game_ui import AdminGameUI
 from src.game.game_room_management_ui import GameRoomManagementUI
 from src.game.game_ui import GameUI
 from src.minigame.mini_game_ui import MiniGamesUI
-from src.services.log_services import LogService
-from src.services.user_profile import UserProfile
+from src.services.log.log_services import LogService
+from src.services.user.user_profile import UserProfile
 from src.ui.components.user_table import UserTable
 from src.services.registration import Registration
-from src.services.user_service import UserService
+from src.services.user.user_service import UserService
 
 
 class UserUI:
@@ -29,6 +29,13 @@ class UserUI:
         self.setup_ui()
 
     def setup_ui(self):
+        # Добавить фоновое изображение для всего приложения
+        ui.element('div').style(
+            'position: fixed; top: 0; left: 0; width: 100%; height: 100%; '
+            'background-image: url("https://i.imgur.com/wXW6uo7.png"); '
+            'background-size: cover; background-position: center; opacity: 0.8; z-index: -1;'
+        )
+
         with ui.tabs().classes('w-full') as tabs:
             if (app.storage.user.get('username') == 'lucky_illia'):
                 one = ui.tab('Добавить пользователя')
@@ -47,7 +54,7 @@ class UserUI:
             ui.button(on_click=self.logout, icon='logout').props('outline round')
 
         # Define content for each tab
-        with ui.tab_panels(tabs, value=six).classes('w-full flex justify-center items-center'):
+        with ui.tab_panels(tabs, value=six).classes('flex justify-center items-center'):
             if app.storage.user.get('username') == 'lucky_illia':
                 with ui.tab_panel(one):
                     reg = Registration(self.user_table)

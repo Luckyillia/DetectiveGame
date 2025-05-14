@@ -1,7 +1,7 @@
 from nicegui import ui, events
-from src.services.user_service import UserService
+from src.services.user.user_service import UserService
 from src.services.password_service import PasswordService
-from src.services.log_services import LogService
+from src.services.log.log_services import LogService
 
 
 class UserTable:

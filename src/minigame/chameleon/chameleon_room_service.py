@@ -3,7 +3,7 @@ import os
 import time
 import random
 from nicegui import app
-from src.services.log_services import LogService
+from src.services.log.log_services import LogService
 
 
 class ChameleonRoomService:

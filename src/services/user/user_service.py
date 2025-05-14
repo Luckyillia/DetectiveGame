@@ -2,7 +2,7 @@ import json
 import os
 import uuid
 from src.models.user import User
-from src.services.log_services import LogService
+from src.services.log.log_services import LogService
 from src.services.password_service import PasswordService
 
 

@@ -1,11 +1,10 @@
-import time
 from nicegui import ui, app
 
-from src.services.user_service import UserService
+from src.services.user.user_service import UserService
 from src.game.game_state_service import GameStateService
 from src.game.game_dialog import GameDialog
 from src.game.game_room_management import GameRoomManagement
-from src.services.log_services import LogService
+from src.services.log.log_services import LogService
 
 
 class GameUI:
@@ -90,19 +89,32 @@ class GameUI:
         else:
             self.game_container = ui.element('div').classes('w-full')
 
+        # В методе show_game_interface, для случая, когда нет активной игры:
+        # В методе show_game_interface, для случая, когда нет активной игры:
         if not current_room_id:
             with self.game_container:
-                with ui.card().classes(
-                        'w-full max-w-lg mx-auto mt-6 p-6 shadow-lg bg-gray-100 dark:bg-gray-800 rounded-2xl'):
-                    ui.label('У вас нет активной игры').classes(
-                        'text-xl font-semibold text-center text-gray-800 dark:text-gray-100 mb-2')
+                # Центрирующий контейнер
+                with ui.column().classes('items-center justify-center'):
+                    # Увеличиваем максимальную ширину карточки и убираем отступы сверху и снизу
+                    with ui.card().classes('w-full max-w-3xl mx-auto mt-4 p-0 shadow-xl rounded-xl overflow-hidden'):
+                        # Увеличиваем высоту баннера для лучшей видимости
+                        ui.image("https://i.imgur.com/TvSrC1A.png").classes(
+                            'w-full h-64 object-cover object-center')
 
-                    ui.label('Пожалуйста, войдите в существующую игру или создайте новую.').classes(
-                        'text-center text-gray-600 dark:text-gray-300 mb-4')
+                        # Содержимое карточки с увеличенными отступами для лучшего баланса
+                        with ui.card_section().classes('w-full p-8 bg-gray-100 dark:bg-gray-800 text-center'):
+                            ui.label('У вас нет активной игры').classes(
+                                'text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4')
 
-                    ui.button('Войти в игру',
-                              on_click=lambda: self.game_room_management.show_join_game_dialog(self)).classes(
-                        'bg-blue-500 hover:bg-blue-600 text-white text-lg w-full rounded-lg py-2 transition')
+                            ui.label('Пожалуйста, войдите в существующую игру или создайте новую.').classes(
+                                'text-lg text-gray-600 dark:text-gray-300 mb-6')
+
+                            # Добавляем контейнер для кнопки, чтобы центрировать её и ограничить ширину
+                            with ui.element('div').classes('max-w-md mx-auto w-full'):
+                                ui.button('Войти в игру',
+                                          on_click=lambda: self.game_room_management.show_join_game_dialog(
+                                              self)).classes(
+                                    'bg-blue-500 hover:bg-blue-600 text-white text-lg w-full rounded-lg py-3 transition')
 
             self.log_service.add_log(
                 level='GAME',
@@ -235,17 +247,46 @@ class GameUI:
                             if is_tooltip:
                                 label_text = f'💡 Подсказка: {location_name}'
 
-                            with ui.expansion(label_text, icon=icon, group='location', value=visited).classes(expansion_classes):
-                                if location_id == '112102':  # Полиция
-                                    ui.image("https://i.imgur.com/w9a9Flo.jpeg").classes('w-full rounded-lg mb-4')
-                                elif location_id == '440321':  # Морг
-                                    ui.image("https://i.imgur.com/jdsmmAE.jpeg").classes('w-full rounded-lg mb-4')
-                                elif location_id == '220123':  # ЗАГС
-                                    ui.image("https://i.imgur.com/YMa1Pj5.jpeg").classes('w-full rounded-lg mb-4')
-                                if is_tooltip:
-                                    ui.label('Это подсказка для текущего хода').classes(
-                                        'text-amber-600 text-sm italic mb-2')
-                                ui.markdown(location_text).classes('whitespace-pre-wrap')
+                            with ui.expansion(label_text, icon=icon, group='location', value=visited).classes(
+                                    expansion_classes):
+                                # Создаем контейнер с фоновым изображением для соответствующих локаций
+                                if location_id in ['112102', '440321', '220123', 'start']:
+                                    # Выбираем правильное изображение для локации
+                                    bg_image = {
+                                        '112102': 'https://i.imgur.com/bhJnYcl.png',  # Полиция
+                                        '440321': 'https://i.imgur.com/BTb7IZI.png',  # Морг
+                                        '220123': 'https://i.imgur.com/1r9oLZV.png',  # ЗАГС
+                                        'start': 'https://i.imgur.com/exZCuJn.png'  # Начальная локация
+                                    }.get(location_id)
+
+                                    # Создаем контейнер с фоновым изображением
+                                    with ui.element('div').classes('relative rounded-lg mb-4 overflow-hidden'):
+                                        # Устанавливаем минимальную высоту для контейнера
+                                        ui.element('div').classes('min-h-[200px]')
+
+                                        # Добавляем фоновое изображение
+                                        ui.element('div').style(
+                                            f'position: absolute; inset: 0; background-image: url("{bg_image}"); '
+                                            f'background-size: cover; background-position: center; opacity: 0.5;'
+                                        )
+
+                                        # Контент поверх фона
+                                        with ui.element('div').classes('relative z-10 p-4'):
+                                            # Показываем подсказку, если это нужно
+                                            if is_tooltip:
+                                                ui.label('Это подсказка для текущего хода').classes(
+                                                    'text-amber-600 text-sm italic mb-2')
+
+                                            # Текст локации
+                                            ui.markdown(location_text).classes('whitespace-pre-wrap')
+                                else:
+                                    # Для остальных локаций - стандартное отображение
+                                    if is_tooltip:
+                                        ui.label('Это подсказка для текущего хода').classes(
+                                            'text-amber-600 text-sm italic mb-2')
+                                    ui.markdown(location_text).classes('whitespace-pre-wrap')
+
+                                # Кнопка для дополнительного документа
                                 if additional_document:
                                     def create_click_handler(doc):
                                         return lambda: self.game_dialog.show_document(doc)

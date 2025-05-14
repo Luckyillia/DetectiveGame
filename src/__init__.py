@@ -5,7 +5,7 @@
 
 # Import necessary classes and modules from submodules
 from .ui.user_ui import UserUI
-from .services.user_service import UserService
+from src.services.user.user_service import UserService
 from .models.user import User
 
 # Define the public API of the package

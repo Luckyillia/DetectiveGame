@@ -1,10 +1,10 @@
 import os
 import json
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from nicegui import ui
 from functools import lru_cache
-from src.services.log_database import LogDatabase
+from src.services.log.log_database import LogDatabase
 
 
 class LogService:

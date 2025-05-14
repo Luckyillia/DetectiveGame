@@ -1,8 +1,6 @@
-import time
-from datetime import datetime
 from nicegui import ui, app
 
-from src.services.user_service import UserService
+from src.services.user.user_service import UserService
 from src.game.game_state_service import GameStateService
 from src.game.game_room_management import GameRoomManagement
 

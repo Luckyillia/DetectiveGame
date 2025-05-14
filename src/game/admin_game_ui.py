@@ -2,7 +2,7 @@ from nicegui import ui, app
 
 from src.game.game_state_service import GameStateService
 from src.game.game_room_management import GameRoomManagement
-from src.services.log_services import LogService
+from src.services.log.log_services import LogService
 
 
 class AdminGameUI:

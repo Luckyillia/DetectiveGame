@@ -1,15 +1,14 @@
 from typing import Optional
 import time
-import json
 
 from fastapi import Request
 from fastapi.responses import RedirectResponse
 from starlette.middleware.base import BaseHTTPMiddleware
-from src.services.user_service import UserService
+from src.services.user.user_service import UserService
 from src.services.auth_service import AuthService
 from src.services.login_security import LoginSecurity
 from src.services.password_service import PasswordService
-from src.services.log_services import LogService
+from src.services.log.log_services import LogService
 from src.services.registration import Registration
 from src.services.email_service import EmailService
 

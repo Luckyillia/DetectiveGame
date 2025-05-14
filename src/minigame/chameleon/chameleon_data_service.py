@@ -1,7 +1,7 @@
 import os
 import json
 import random
-from src.services.log_services import LogService
+from src.services.log.log_services import LogService
 
 
 class ChameleonDataService:
