@@ -36,44 +36,48 @@ class UserUI:
             'background-size: cover; background-position: center; z-index: -1;'
         )
 
-        with ui.tabs().classes('w-full') as tabs:
-            if (app.storage.user.get('username') == 'lucky_illia'):
-                one = ui.tab('Добавить пользователя')
-                two = ui.tab('Список пользователей')
-                three = ui.tab('Логи')
-                four = ui.tab('Управление играми')
-                five = ui.tab('Управление комнатами')
-            six = ui.tab('Детектив')
-            eight = ui.tab('Мини игры')
-            seven = ui.tab('Профиль')
+        # Main centered container for the entire interface
+        with ui.element('div').classes('w-full mx-auto px-4 py-2'):
+            with ui.tabs().classes('w-full') as tabs:
+                if (app.storage.user.get('username') == 'lucky_illia'):
+                    one = ui.tab('Добавить пользователя')
+                    two = ui.tab('Список пользователей')
+                    three = ui.tab('Логи')
+                    four = ui.tab('Управление играми')
+                    five = ui.tab('Управление комнатами')
+                six = ui.tab('Детектив')
+                eight = ui.tab('Мини игры')
+                seven = ui.tab('Профиль')
 
-        # User info and logout button
-        with ui.row().classes('w-full items-center px-4 py-2 rounded-lg flex justify-center'):
-            self.dark_mode = ui.switch('Dark mode', value=app.storage.user.get('dark_mode'), on_change=lambda e: self.switch_dark_mode(e.value)).classes('flex-grow')
-            ui.label(f'Привет, {app.storage.user.get("username", "")}').classes('text-xl font-semibold text-primary text-center')
-            ui.button(on_click=self.logout, icon='logout').props('outline round')
+            # User info and logout button
+            with ui.row().classes('w-full items-center px-4 py-2 rounded-lg flex justify-center'):
+                self.dark_mode = ui.switch('Dark mode', value=app.storage.user.get('dark_mode'),
+                                           on_change=lambda e: self.switch_dark_mode(e.value)).classes('flex-grow')
+                ui.label(f'Привет, {app.storage.user.get("username", "")}').classes(
+                    'text-xl font-semibold text-primary text-center')
+                ui.button(on_click=self.logout, icon='logout').props('outline round')
 
-        # Define content for each tab
-        with ui.tab_panels(tabs, value=six).classes('flex justify-center items-center'):
-            if app.storage.user.get('username') == 'lucky_illia':
-                with ui.tab_panel(one):
-                    reg = Registration(self.user_table)
-                with ui.tab_panel(two):
-                    self.user_table.init_table()
-                with ui.tab_panel(three):
-                    self.log_services.log_interface()
-                with ui.tab_panel(four):
-                    self.admin_game_ui.create_ui()
-                with ui.tab_panel(five):
-                    self.game_room_management_ui.create_ui()
+            # Define content for each tab
+            with ui.tab_panels(tabs, value=six).classes('max-w-6xl flex justify-center items-center'):
+                if app.storage.user.get('username') == 'lucky_illia':
+                    with ui.tab_panel(one):
+                        reg = Registration(self.user_table)
+                    with ui.tab_panel(two):
+                        self.user_table.init_table()
+                    with ui.tab_panel(three):
+                        self.log_services.log_interface()
+                    with ui.tab_panel(four):
+                        self.admin_game_ui.create_ui()
+                    with ui.tab_panel(five):
+                        self.game_room_management_ui.create_ui()
 
-            with ui.tab_panel(six):
-                self.game_ui.show_game_interface
-            with ui.tab_panel(eight):
-                self.mini_games_ui.create_mini_games_ui()
-            with ui.tab_panel(seven):
-                self.user_profile.show_profile_ui(app.storage.user.get('user_id'))
-        self.check_and_request_email()
+                with ui.tab_panel(six):
+                    self.game_ui.show_game_interface
+                with ui.tab_panel(eight):
+                    self.mini_games_ui.create_mini_games_ui()
+                with ui.tab_panel(seven):
+                    self.user_profile.show_profile_ui(app.storage.user.get('user_id'))
+            self.check_and_request_email()
 
 
     def switch_dark_mode(self, arg):

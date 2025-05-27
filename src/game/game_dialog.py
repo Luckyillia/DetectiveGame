@@ -43,7 +43,7 @@ class GameDialog:
         dialog.open()
 
     def show_newspaper_dialog(self, game_data):
-        with ui.dialog() as dialog, ui.card().classes('p-0 w-[600px] max-w-full overflow-hidden'):
+        with ui.dialog() as dialog, ui.card().classes('p-0 w-[600px] max-w-full'):
             # Заголовок газеты с изображением
             ui.image("https://i.imgur.com/SUYFT71.png").classes('w-full h-[256px] object-cover')
 

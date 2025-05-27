@@ -1,28 +1,62 @@
 {
-  "chameleon_6420": {
-    "room_id": "chameleon_6420",
-    "created_at": 1747158048,
-    "last_activity": 1747158048,
-    "status": "waiting",
-    "host_id": "68d50bda-7a0c-43b4-a5a6-178693f37a3c",
+  "chameleon_9279": {
+    "room_id": "chameleon_9279",
+    "created_at": 1748121667,
+    "last_activity": 1748122887,
+    "status": "playing",
+    "host_id": "0e5ad786-861b-4fc7-8f7f-41c3a65e5b76",
     "players": [
       {
-        "id": "68d50bda-7a0c-43b4-a5a6-178693f37a3c",
-        "name": "Хаха",
+        "id": "0e5ad786-861b-4fc7-8f7f-41c3a65e5b76",
+        "name": "Sebastyan",
         "is_host": true,
-        "joined_at": 1747158048,
-        "last_action": 1747158048,
+        "joined_at": 1748121682,
+        "last_action": 1748122887,
+        "is_ready": true
+      },
+      {
+        "id": "3262e22a-2463-4275-bb47-230e5cc0c0f5",
+        "name": "Картошка",
+        "is_host": false,
+        "joined_at": 1748121692,
+        "last_action": 1748121990,
+        "is_ready": true
+      },
+      {
+        "id": "69e223d1-50a3-40f7-85a8-06952fa9e8e9",
+        "name": "Kira228738",
+        "is_host": false,
+        "joined_at": 1748121699,
+        "last_action": 1748121990,
         "is_ready": true
       }
     ],
     "game_data": {
-      "category": null,
-      "word": null,
-      "chameleon_index": -1,
+      "category": "Города",
+      "word": "Берлин",
+      "chameleon_index": 3,
       "descriptions": [],
       "votes": {},
-      "round": 0,
-      "current_player_index": 0
+      "round": 1,
+      "current_player_index": 0,
+      "grid_words": [
+        "Пекин",
+        "Москва",
+        "Рио-де-Жанейро",
+        "Нью-Йорк",
+        "Венеция",
+        "Мадрид",
+        "Рим",
+        "Берлин",
+        "Лондон",
+        "Дубай",
+        "Сидней",
+        "Сингапур",
+        "Токио",
+        "Париж",
+        "Барселона",
+        "Стамбул"
+      ]
     }
   }
 }
