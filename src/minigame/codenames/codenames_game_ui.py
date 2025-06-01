@@ -307,14 +307,26 @@ class CodenamesGameUI:
             self.show_main_menu()
             return
 
-        self.game_container.clear()
+        # ИСПРАВЛЕНИЕ: Очищаем контейнер только при первом показе
+        if not hasattr(self, '_waiting_room_shown'):
+            self.game_container.clear()
+            self._waiting_room_shown = True
 
+        # Отменяем существующие таймеры и создаем новый
         self._cancel_timers()
-        self.update_timer = ui.timer(1.0, lambda: self.update_waiting_room())
+        self.update_timer = ui.timer(2.0, lambda: self.update_waiting_room())  # Увеличиваем интервал
 
         current_user_id = app.storage.user.get('user_id')
         current_player = next((p for p in room_data["players"] if p["id"] == current_user_id), None)
         is_host = current_player and current_player.get("is_host", False)
+
+        # Создаем или обновляем контент
+        self._render_waiting_room_content(room_data, current_user_id, is_host)
+
+    def _render_waiting_room_content(self, room_data, current_user_id, is_host):
+        """Рендерит содержимое комнаты ожидания"""
+        # Очищаем контейнер каждый раз при рендеринге
+        self.game_container.clear()
 
         with self.game_container:
             with ui.card().classes('w-full p-6 rounded-xl shadow-lg bg-gray-100 dark:bg-gray-800'):
@@ -334,14 +346,26 @@ class CodenamesGameUI:
                             on_click=lambda: ui.notify('ID скопирован', type='positive')
                         ).classes('bg-blue-600 hover:bg-blue-700 text-white')
 
-                    # Список игроков
-                    with ui.card().classes('w-full p-4 mb-4 bg-gray-200 dark:bg-gray-700 rounded-lg shadow'):
-                        ui.label('Игроки:').classes('font-bold mb-3 text-lg text-gray-800 dark:text-gray-200')
-                        self.components.create_player_table(
-                            room_data["players"],
-                            room_data["teams"],
-                            current_user_id
-                        )
+                    # Показываем статистику команд
+                    with ui.card().classes('w-full p-4 mb-4 bg-blue-50 dark:bg-blue-800 rounded-lg'):
+                        teams_count = len(room_data["teams"])
+                        max_teams = room_data["settings"]["team_count"]
+                        ui.label(f'Команд создано: {teams_count}/{max_teams}').classes(
+                            'text-lg font-bold text-blue-800 dark:text-blue-200 text-center')
+
+                        # Показываем требования для начала игры
+                        if teams_count >= 2:
+                            # Проверяем, есть ли в каждой команде капитан
+                            ready_teams = sum(1 for team in room_data["teams"].values() if team.get("captain"))
+                            if ready_teams >= 2:
+                                ui.label('✅ Готово к началу игры!').classes(
+                                    'text-green-600 dark:text-green-400 text-center font-medium')
+                            else:
+                                ui.label('⏳ Нужны капитаны во всех командах').classes(
+                                    'text-yellow-600 dark:text-yellow-400 text-center font-medium')
+                        else:
+                            ui.label('⏳ Нужно минимум 2 команды').classes(
+                                'text-yellow-600 dark:text-yellow-400 text-center font-medium')
 
                     # Выбор команды
                     self.components.create_team_selection(
@@ -352,29 +376,67 @@ class CodenamesGameUI:
                     )
 
                     # Настройки игры (только для хоста)
-                    self.components.create_game_settings(
-                        room_data["settings"],
-                        self.update_settings,
-                        is_host
-                    )
+                    if is_host:
+                        try:
+                            self.components.create_game_settings(
+                                room_data["settings"],
+                                self.update_settings,
+                                is_host
+                            )
+                        except Exception as e:
+                            ui.label(f'Ошибка настроек: {str(e)}').classes('text-red-500')
+
+                    # Список игроков
+                    with ui.card().classes('w-full p-4 mb-4 bg-gray-200 dark:bg-gray-700 rounded-lg shadow'):
+                        ui.label('Игроки:').classes('font-bold mb-3 text-lg text-gray-800 dark:text-gray-200')
+                        try:
+                            self.components.create_player_table(
+                                room_data["players"],
+                                room_data["teams"],
+                                current_user_id
+                            )
+                        except Exception as e:
+                            ui.label(f'Ошибка таблицы игроков: {str(e)}').classes('text-red-500')
 
                     # Кнопка начала игры (только для хоста)
                     if is_host:
                         def start_game():
-                            field = self.data_service.generate_game_field(
-                                len(room_data["teams"])
-                            )
+                            # Проверяем требования перед началом
+                            teams_count = len(room_data["teams"])
+                            if teams_count < 2:
+                                ui.notify('Нужно минимум 2 команды для начала игры', type='warning')
+                                return
 
-                            success = self.room_service.start_game(self.current_room_id, field)
-                            if success:
-                                ui.notify('Игра началась!', type='positive')
-                                self.show_game_screen()
-                            else:
-                                ui.notify('Ошибка при запуске игры. Проверьте, что все команды готовы.',
-                                          type='negative')
+                            # Проверяем, есть ли капитаны во всех командах
+                            teams_without_captain = [team_id for team_id, team in room_data["teams"].items()
+                                                     if not team.get("captain")]
+                            if teams_without_captain:
+                                ui.notify('Во всех командах должны быть капитаны', type='warning')
+                                return
 
-                        ui.button('Начать игру', icon='play_arrow', on_click=start_game).classes(
-                            'w-full bg-green-600 hover:bg-green-700 text-white mt-3')
+                            try:
+                                field = self.data_service.generate_game_field(teams_count)
+                                success = self.room_service.start_game(self.current_room_id, field)
+                                if success:
+                                    ui.notify('Игра началась!', type='positive')
+                                    self._waiting_room_shown = False  # Сбрасываем флаг
+                                    self.show_game_screen()
+                                else:
+                                    ui.notify('Ошибка при запуске игры', type='negative')
+                            except Exception as e:
+                                ui.notify(f'Ошибка при создании игры: {str(e)}', type='negative')
+
+                        # Кнопка активна только при выполнении условий
+                        teams_ready = len(room_data["teams"]) >= 2 and all(
+                            team.get("captain") for team in room_data["teams"].values()
+                        )
+
+                        start_button = ui.button('Начать игру', icon='play_arrow', on_click=start_game)
+                        if teams_ready:
+                            start_button.classes('w-full bg-green-600 hover:bg-green-700 text-white mt-3')
+                        else:
+                            start_button.classes('w-full bg-gray-400 text-gray-600 mt-3')
+                            start_button.props('disable')
 
             # Кнопка выхода из игры
             ui.button('Выйти из игры', icon='exit_to_app', on_click=self.leave_game).classes(
@@ -386,55 +448,118 @@ class CodenamesGameUI:
             self._cancel_timers()
             return
 
-        room_data = self.room_service.get_room(self.current_room_id)
-        if not room_data:
-            self._cancel_timers()
-            ui.notify('Комната была удалена', type='negative')
-            self.current_room_id = None
-            app.storage.user.update({'codenames_room_id': None})
-            self.show_main_menu()
-            return
+        try:
+            room_data = self.room_service.get_room(self.current_room_id)
+            if not room_data:
+                self._cancel_timers()
+                ui.notify('Комната была удалена', type='negative')
+                self.current_room_id = None
+                app.storage.user.update({'codenames_room_id': None})
+                self.show_main_menu()
+                return
 
-        if room_data["status"] == "playing":
-            self.last_update_time = room_data.get("last_activity", 0)
-            self.show_game_screen()
-            return
+            # Если статус изменился на playing, переходим на экран игры
+            if room_data["status"] == "playing":
+                self.last_update_time = room_data.get("last_activity", 0)
+                self._waiting_room_shown = False  # Сбрасываем флаг
+                self.show_game_screen()
+                return
 
-        if room_data.get("last_activity", 0) > self.last_update_time:
-            self.last_update_time = room_data.get("last_activity", 0)
-            self.show_waiting_room()
-            return
+            # ИСПРАВЛЕНИЕ: Обновляем только при изменении данных
+            if room_data.get("last_activity", 0) > self.last_update_time:
+                self.last_update_time = room_data.get("last_activity", 0)
+
+                current_user_id = app.storage.user.get('user_id')
+                current_player = next((p for p in room_data["players"] if p["id"] == current_user_id), None)
+                is_host = current_player and current_player.get("is_host", False)
+
+                # Перерисовываем только содержимое
+                self._render_waiting_room_content(room_data, current_user_id, is_host)
+
+        except Exception as e:
+            # Логируем ошибку и продолжаем
+            self.log_service.add_error_log(
+                error_message=f"Ошибка обновления комнаты ожидания: {str(e)}",
+                action="CODENAMES_UPDATE_ERROR",
+                user_id=app.storage.user.get('user_id')
+            )
+            print(f"Ошибка обновления комнаты ожидания: {e}")
 
     def join_team(self, team_id, role):
         """Присоединяется к команде в указанной роли."""
         if not self.current_room_id:
             return
 
-        success = self.room_service.join_team(
-            self.current_room_id,
-            app.storage.user.get('user_id'),
-            team_id,
-            role
-        )
+        try:
+            success = self.room_service.join_team(
+                self.current_room_id,
+                app.storage.user.get('user_id'),
+                team_id,
+                role
+            )
 
-        if success:
-            role_text = "капитаном" if role == "captain" else "участником"
-            ui.notify(f'Вы стали {role_text} команды!', type='positive')
-            self.show_waiting_room()
-        else:
-            ui.notify('Ошибка при присоединении к команде', type='negative')
+            if success:
+                role_text = "капитаном" if role == "captain" else "участником"
+                team_colors = {
+                    "1": "Красной", "2": "Синей", "3": "Зеленой",
+                    "4": "Фиолетовой", "5": "Оранжевой"
+                }
+                team_name = team_colors.get(team_id, f"команды {team_id}")
+                ui.notify(f'Вы стали {role_text} {team_name} команды!', type='positive')
+
+                # Логируем присоединение к команде
+                self.log_service.add_log(
+                    level="GAME",
+                    action="CODENAMES_JOIN_TEAM_UI",
+                    message=f"Игрок присоединился к команде {team_id} как {role}",
+                    user_id=app.storage.user.get('user_id'),
+                    metadata={"room_id": self.current_room_id, "team_id": team_id, "role": role}
+                )
+
+                # Принудительно обновляем данные
+                self.last_update_time = 0
+
+            else:
+                ui.notify('Ошибка при присоединении к команде', type='negative')
+
+        except Exception as e:
+            ui.notify(f'Ошибка: {str(e)}', type='negative')
+            self.log_service.add_error_log(
+                error_message=f"Ошибка присоединения к команде: {str(e)}",
+                action="CODENAMES_JOIN_TEAM_ERROR"
+            )
 
     def update_settings(self, settings):
         """Обновляет настройки игры."""
         if not self.current_room_id:
             return
 
-        success = self.room_service.update_settings(self.current_room_id, settings)
-        if success:
-            ui.notify('Настройки обновлены', type='positive')
-            self.show_waiting_room()
-        else:
-            ui.notify('Ошибка при обновлении настроек', type='negative')
+        try:
+            success = self.room_service.update_settings(self.current_room_id, settings)
+            if success:
+                ui.notify('Настройки обновлены', type='positive')
+
+                # Логируем изменение настроек
+                self.log_service.add_log(
+                    level="GAME",
+                    action="CODENAMES_SETTINGS_UPDATE",
+                    message=f"Обновлены настройки игры",
+                    user_id=app.storage.user.get('user_id'),
+                    metadata={"room_id": self.current_room_id, "new_settings": settings}
+                )
+
+                # Принудительно обновляем данные
+                self.last_update_time = 0
+
+            else:
+                ui.notify('Ошибка при обновлении настроек', type='negative')
+
+        except Exception as e:
+            ui.notify(f'Ошибка: {str(e)}', type='negative')
+            self.log_service.add_error_log(
+                error_message=f"Ошибка обновления настроек: {str(e)}",
+                action="CODENAMES_SETTINGS_ERROR"
+            )
 
     def show_game_screen(self):
         """Показывает экран игры."""

@@ -148,11 +148,40 @@ class CodenamesComponents:
 
         return table
 
+    # Исправления для codenames_components_ui.py
+
     @staticmethod
     def create_team_selection(teams, max_teams, join_team_handler, current_user_id):
         """Создает интерфейс выбора команды"""
         with ui.card().classes('w-full p-4 mb-4 bg-blue-50 dark:bg-blue-900 rounded-lg shadow'):
             ui.label('Выбор команды').classes('font-bold mb-3 text-lg text-blue-800 dark:text-blue-200')
+
+            # ИСПРАВЛЕНИЕ: Показываем текущую команду игрока
+            current_team = None
+            current_role = None
+
+            # Находим текущую команду игрока
+            for team_id, team in teams.items():
+                if team.get('captain') == current_user_id:
+                    current_team = team_id
+                    current_role = 'captain'
+                    break
+                elif current_user_id in team.get('members', []):
+                    current_team = team_id
+                    current_role = 'member'
+                    break
+
+            # Отображаем текущий статус игрока
+            if current_team:
+                team_name = teams[current_team].get('name', f'Команда {current_team}')
+                role_text = 'Капитан' if current_role == 'captain' else 'Участник'
+                with ui.card().classes('w-full p-3 mb-4 bg-green-100 dark:bg-green-800 rounded-lg'):
+                    ui.label(f'Ваша команда: {team_name} ({role_text})').classes(
+                        'font-bold text-green-800 dark:text-green-200 text-center')
+            else:
+                with ui.card().classes('w-full p-3 mb-4 bg-yellow-100 dark:bg-yellow-800 rounded-lg'):
+                    ui.label('Вы не в команде. Выберите или создайте команду.').classes(
+                        'font-bold text-yellow-800 dark:text-yellow-200 text-center')
 
             # Показываем существующие команды
             if teams:
@@ -160,39 +189,76 @@ class CodenamesComponents:
                 for team_id, team in teams.items():
                     team_color = team.get('color', 'bg-gray-500')
                     team_name = team.get('name', f'Команда {team_id}')
-                    captain_name = "Нет капитана"
+                    captain_id = team.get('captain')
+                    members = team.get('members', [])
 
-                    # Находим капитана (это нужно будет передать извне)
-                    with ui.row().classes('w-full items-center mb-2 p-2 bg-white dark:bg-gray-800 rounded'):
-                        ui.element('div').classes(f'{team_color} w-4 h-4 rounded mr-2')
-                        ui.label(f'{team_name}').classes('font-medium flex-grow')
-                        ui.label(f'Участников: {len(team.get("members", []))}').classes('text-sm text-gray-600 mr-2')
+                    # Находим имя капитана (это нужно передавать из родительского компонента)
+                    with ui.row().classes('w-full items-center mb-2 p-3 bg-white dark:bg-gray-800 rounded-lg border'):
+                        # Индикатор цвета команды
+                        ui.element('div').classes(f'{team_color} w-6 h-6 rounded mr-3')
 
-                        if team.get('captain'):
-                            ui.button('Присоединиться',
-                                      on_click=lambda tid=team_id: join_team_handler(tid, 'member')).classes('mr-1')
-                        else:
-                            ui.button('Стать капитаном',
-                                      on_click=lambda tid=team_id: join_team_handler(tid, 'captain')).classes('mr-1')
+                        # Информация о команде
+                        with ui.column().classes('flex-grow'):
+                            ui.label(f'{team_name}').classes('font-bold text-lg')
+                            ui.label(f'Участников: {1 + len(members)} (капитан + {len(members)} участников)').classes(
+                                'text-sm text-gray-600 dark:text-gray-400')
 
-            # Кнопки для создания новых команд
+                        # Кнопки действий
+                        with ui.column().classes('gap-1'):
+                            # Если есть капитан, можно присоединиться как участник
+                            if captain_id and captain_id != current_user_id:
+                                if current_user_id not in members:
+                                    ui.button('Присоединиться',
+                                              on_click=lambda tid=team_id: join_team_handler(tid, 'member')).classes(
+                                        'bg-blue-500 text-white text-sm')
+                                else:
+                                    ui.label('Вы участник').classes('text-green-600 text-sm font-medium')
+
+                            # Если нет капитана или игрок хочет стать капитаном
+                            if not captain_id:
+                                ui.button('Стать капитаном',
+                                          on_click=lambda tid=team_id: join_team_handler(tid, 'captain')).classes(
+                                    'bg-green-500 text-white text-sm')
+                            elif captain_id == current_user_id:
+                                ui.label('Вы капитан').classes('text-yellow-600 text-sm font-bold')
+                            else:
+                                ui.button('Сменить капитана',
+                                          on_click=lambda tid=team_id: join_team_handler(tid, 'captain')).classes(
+                                    'bg-orange-500 text-white text-sm')
+
+            # ИСПРАВЛЕНИЕ: Кнопки для создания новых команд (показываем все доступные)
             ui.label('Создать новую команду:').classes('font-medium mb-2 mt-4')
-            with ui.row().classes('flex-wrap gap-2'):
-                for team_id in range(1, max_teams + 1):
-                    if str(team_id) not in teams:
-                        team_colors = {
+
+            available_teams = []
+            for team_id in range(1, max_teams + 1):
+                if str(team_id) not in teams:
+                    available_teams.append(team_id)
+
+            if available_teams:
+                with ui.row().classes('flex-wrap gap-2'):
+                    for team_id in available_teams:
+                        team_colors_names = {
                             1: "Красная", 2: "Синяя", 3: "Зеленая",
                             4: "Фиолетовая", 5: "Оранжевая"
                         }
-                        team_name = team_colors.get(team_id, f"Команда {team_id}")
+                        team_name = team_colors_names.get(team_id, f"Команда {team_id}")
                         ui.button(f'Создать {team_name}',
-                                  on_click=lambda tid=str(team_id): join_team_handler(tid, 'captain')).classes('mb-1')
+                                  on_click=lambda tid=str(team_id): join_team_handler(tid, 'captain')).classes(
+                            'mb-1 bg-purple-500 text-white')
+            else:
+                ui.label('Все команды созданы').classes('text-gray-500 italic')
+
+    # Исправленный метод create_game_settings в codenames_components_ui.py
 
     @staticmethod
     def create_game_settings(current_settings, update_handler, is_host=False):
         """Создает панель настроек игры"""
         if not is_host:
             return
+
+        # Проверяем, что current_settings не None
+        if current_settings is None:
+            current_settings = {"team_count": 2, "hint_mode": "written"}
 
         with ui.card().classes('w-full p-4 mb-4 bg-green-50 dark:bg-green-900 rounded-lg shadow'):
             ui.label('Настройки игры (только для ведущего)').classes(
@@ -208,24 +274,35 @@ class CodenamesComponents:
 
             with ui.row().classes('w-full items-center mb-4'):
                 ui.label('Режим подсказок:').classes('font-medium mr-2')
+
+                # ИСПРАВЛЕНИЕ: Используем простые строки вместо словарей
+                hint_mode_options = ['written', 'verbal']
                 hint_mode_select = ui.select(
-                    options=[
-                        {'label': 'Письменные подсказки', 'value': 'written'},
-                        {'label': 'Устные подсказки', 'value': 'verbal'}
-                    ],
+                    options=hint_mode_options,
                     value=current_settings.get('hint_mode', 'written')
                 ).classes('mr-4')
                 hint_mode_select.props('outlined dense')
 
+                # Добавляем подписи рядом с селектом
+                ui.label('(written = письменные, verbal = устные)').classes('text-xs text-gray-500 ml-2')
+
             def update_settings():
-                new_settings = {
-                    'team_count': team_count_select.value,
-                    'hint_mode': hint_mode_select.value
-                }
-                update_handler(new_settings)
+                if update_handler:
+                    new_settings = {
+                        'team_count': team_count_select.value,
+                        'hint_mode': hint_mode_select.value
+                    }
+                    update_handler(new_settings)
 
             ui.button('Применить настройки', on_click=update_settings).classes(
                 'bg-green-600 hover:bg-green-700 text-white')
+
+            # Показываем текущие настройки
+            with ui.card().classes('w-full p-2 mt-2 bg-gray-100 dark:bg-gray-700'):
+                ui.label('Текущие настройки:').classes('font-medium mb-1')
+                ui.label(f"• Команд: {current_settings.get('team_count', 2)}").classes('text-sm')
+                hint_mode_text = 'Письменные' if current_settings.get('hint_mode', 'written') == 'written' else 'Устные'
+                ui.label(f"• Режим подсказок: {hint_mode_text}").classes('text-sm')
 
     @staticmethod
     def create_game_field(field, grid_size, is_captain=False, card_click_handler=None):

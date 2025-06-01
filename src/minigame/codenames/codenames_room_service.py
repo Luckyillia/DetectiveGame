@@ -247,98 +247,6 @@ class CodenamesRoomService:
 
         return success
 
-    def join_team(self, room_id, player_id, team_id, role):
-        """Присоединяет игрока к команде в указанной роли."""
-        rooms = self.load_rooms()
-        if room_id not in rooms:
-            return False
-
-        room = rooms[room_id]
-        current_time = int(time.time())
-
-        # Находим игрока
-        player = next((p for p in room["players"] if p["id"] == player_id), None)
-        if not player:
-            return False
-
-        # Если игрок уже в команде, сначала удаляем его оттуда
-        if player.get("team"):
-            old_team_id = player["team"]
-            if old_team_id in room["teams"]:
-                old_team = room["teams"][old_team_id]
-                if old_team["captain"] == player_id:
-                    old_team["captain"] = None
-                elif player_id in old_team["members"]:
-                    old_team["members"].remove(player_id)
-
-        # Если роль капитан и команда не существует, создаем её
-        if role == "captain" and team_id not in room["teams"]:
-            team_colors = {
-                "1": {"color": "bg-red-500", "name": "Красная"},
-                "2": {"color": "bg-blue-500", "name": "Синяя"},
-                "3": {"color": "bg-green-500", "name": "Зеленая"},
-                "4": {"color": "bg-purple-500", "name": "Фиолетовая"},
-                "5": {"color": "bg-orange-500", "name": "Оранжевая"}
-            }
-
-            team_info = team_colors.get(team_id, {"color": "bg-gray-500", "name": f"Команда {team_id}"})
-
-            room["teams"][team_id] = {
-                "captain": player_id,
-                "members": [],
-                "color": team_info["color"],
-                "name": team_info["name"]
-            }
-        elif role == "captain" and team_id in room["teams"]:
-            # Меняем капитана команды
-            room["teams"][team_id]["captain"] = player_id
-        elif role == "member" and team_id in room["teams"]:
-            # Добавляем игрока как участника
-            if player_id not in room["teams"][team_id]["members"]:
-                room["teams"][team_id]["members"].append(player_id)
-
-        # Обновляем информацию игрока
-        player["team"] = team_id
-        player["role"] = role
-        player["last_action"] = current_time
-        room["last_activity"] = current_time
-
-        success = self.save_rooms(rooms)
-
-        if success:
-            self.log_service.add_log(
-                level="GAME",
-                action="CODENAMES_JOIN_TEAM",
-                message=f"Игрок присоединился к команде {team_id} как {role}",
-                user_id=player_id,
-                metadata={"room_id": room_id, "team_id": team_id, "role": role}
-            )
-
-        return success
-
-    def update_settings(self, room_id, settings):
-        """Обновляет настройки комнаты."""
-        rooms = self.load_rooms()
-        if room_id not in rooms:
-            return False
-
-        room = rooms[room_id]
-        room["settings"].update(settings)
-        room["last_activity"] = int(time.time())
-
-        success = self.save_rooms(rooms)
-
-        if success:
-            self.log_service.add_log(
-                level="GAME",
-                action="CODENAMES_UPDATE_SETTINGS",
-                message=f"Обновлены настройки комнаты",
-                user_id=app.storage.user.get('user_id'),
-                metadata={"room_id": room_id, "settings": settings}
-            )
-
-        return success
-
     def start_game(self, room_id, field):
         """Начинает игру в комнате."""
         rooms = self.load_rooms()
@@ -387,20 +295,165 @@ class CodenamesRoomService:
 
         return success
 
-    def _check_game_requirements(self, room):
+    # Исправления для codenames_room_service.py
+
+    @staticmethod
+    def _check_game_requirements(room):
         """Проверяет минимальные требования для начала игры."""
         # Минимум 2 команды с капитанами
         if len(room["teams"]) < 2:
             return False
 
-        # В каждой команде должен быть капитан и хотя бы один участник
+        # В каждой команде должен быть капитан (участники необязательны)
         for team_id, team in room["teams"].items():
             if not team["captain"]:
                 return False
-            if len(team["members"]) < 1:
-                return False
+            # Убираем требование минимум одного участника
+            # Капитан может играть один в команде
 
         return True
+
+    def join_team(self, room_id, player_id, team_id, role):
+        """Присоединяет игрока к команде в указанной роли."""
+        rooms = self.load_rooms()
+        if room_id not in rooms:
+            return False
+
+        room = rooms[room_id]
+        current_time = int(time.time())
+
+        # Находим игрока
+        player = next((p for p in room["players"] if p["id"] == player_id), None)
+        if not player:
+            return False
+
+        # ИСПРАВЛЕНИЕ: Сначала удаляем игрока из старой команды
+        if player.get("team"):
+            old_team_id = player["team"]
+            if old_team_id in room["teams"]:
+                old_team = room["teams"][old_team_id]
+                if old_team["captain"] == player_id:
+                    # Если это был капитан, назначаем нового или удаляем команду
+                    if old_team["members"]:
+                        # Назначаем первого участника новым капитаном
+                        new_captain_id = old_team["members"][0]
+                        old_team["captain"] = new_captain_id
+                        old_team["members"].remove(new_captain_id)
+                        # Обновляем роль нового капитана
+                        for p in room["players"]:
+                            if p["id"] == new_captain_id:
+                                p["role"] = "captain"
+                                break
+                    else:
+                        # Команда остается без игроков, удаляем её
+                        del room["teams"][old_team_id]
+                elif player_id in old_team["members"]:
+                    old_team["members"].remove(player_id)
+
+        # Если роль капитан и команда не существует, создаем её
+        if role == "captain" and team_id not in room["teams"]:
+            team_colors = {
+                "1": {"color": "bg-red-500", "name": "Красная"},
+                "2": {"color": "bg-blue-500", "name": "Синяя"},
+                "3": {"color": "bg-green-500", "name": "Зеленая"},
+                "4": {"color": "bg-purple-500", "name": "Фиолетовая"},
+                "5": {"color": "bg-orange-500", "name": "Оранжевая"}
+            }
+
+            team_info = team_colors.get(team_id, {"color": "bg-gray-500", "name": f"Команда {team_id}"})
+
+            room["teams"][team_id] = {
+                "captain": player_id,
+                "members": [],
+                "color": team_info["color"],
+                "name": team_info["name"]
+            }
+        elif role == "captain" and team_id in room["teams"]:
+            # ИСПРАВЛЕНИЕ: Правильно меняем капитана команды
+            old_captain_id = room["teams"][team_id]["captain"]
+            room["teams"][team_id]["captain"] = player_id
+
+            # Если у команды был старый капитан, делаем его участником
+            if old_captain_id and old_captain_id != player_id:
+                if old_captain_id not in room["teams"][team_id]["members"]:
+                    room["teams"][team_id]["members"].append(old_captain_id)
+                # Обновляем роль старого капитана
+                for p in room["players"]:
+                    if p["id"] == old_captain_id:
+                        p["role"] = "member"
+                        break
+
+        elif role == "member" and team_id in room["teams"]:
+            # Добавляем игрока как участника
+            if player_id not in room["teams"][team_id]["members"]:
+                room["teams"][team_id]["members"].append(player_id)
+
+        # Обновляем информацию игрока
+        player["team"] = team_id
+        player["role"] = role
+        player["last_action"] = current_time
+        room["last_activity"] = current_time
+
+        success = self.save_rooms(rooms)
+
+        if success:
+            self.log_service.add_log(
+                level="GAME",
+                action="CODENAMES_JOIN_TEAM",
+                message=f"Игрок присоединился к команде {team_id} как {role}",
+                user_id=player_id,
+                metadata={"room_id": room_id, "team_id": team_id, "role": role}
+            )
+
+        return success
+
+    def update_settings(self, room_id, settings):
+        """Обновляет настройки комнаты."""
+        rooms = self.load_rooms()
+        if room_id not in rooms:
+            return False
+
+        room = rooms[room_id]
+
+        # ИСПРАВЛЕНИЕ: Если изменилось количество команд, нужно проверить существующие команды
+        old_team_count = room["settings"].get("team_count", 2)
+        new_team_count = settings.get("team_count", old_team_count)
+
+        room["settings"].update(settings)
+
+        # Если уменьшилось количество команд, удаляем лишние
+        if new_team_count < old_team_count:
+            teams_to_remove = []
+            for team_id in room["teams"]:
+                if int(team_id) > new_team_count:
+                    teams_to_remove.append(team_id)
+
+            for team_id in teams_to_remove:
+                # Убираем игроков из удаляемых команд
+                team = room["teams"][team_id]
+                players_to_reset = [team["captain"]] + team["members"]
+                for player_id in players_to_reset:
+                    for player in room["players"]:
+                        if player["id"] == player_id:
+                            player["team"] = None
+                            player["role"] = None
+                            break
+                del room["teams"][team_id]
+
+        room["last_activity"] = int(time.time())
+
+        success = self.save_rooms(rooms)
+
+        if success:
+            self.log_service.add_log(
+                level="GAME",
+                action="CODENAMES_UPDATE_SETTINGS",
+                message=f"Обновлены настройки комнаты",
+                user_id=app.storage.user.get('user_id'),
+                metadata={"room_id": room_id, "settings": settings}
+            )
+
+        return success
 
     def set_hint(self, room_id, player_id, hint_text, hint_count):
         """Устанавливает подсказку от капитана."""
@@ -511,7 +564,8 @@ class CodenamesRoomService:
             self._switch_turn(room)
             return "wrong"
 
-    def _check_team_victory(self, room, team_id):
+    @staticmethod
+    def _check_team_victory(room, team_id):
         """Проверяет, выиграла ли команда."""
         field = room["game_data"]["field"]
         team_cards = [card for card in field if card["team"] == team_id]
@@ -519,7 +573,8 @@ class CodenamesRoomService:
 
         return len(revealed_team_cards) == len(team_cards)
 
-    def _switch_turn(self, room):
+    @staticmethod
+    def _switch_turn(room):
         """Переключает ход на следующую команду."""
         turn_order = room["game_data"]["turn_order"]
         current_team = room["game_data"]["current_team"]
