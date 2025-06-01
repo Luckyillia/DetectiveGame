@@ -533,6 +533,18 @@ class SpyGameUI:
 
                         ui.button('Перейти к голосованию', icon='how_to_vote', on_click=start_voting).classes(
                             'bg-red-600 hover:bg-red-700 text-white')
+            with ui.card().classes('w-full p-6 rounded-xl shadow-lg bg-gray-100 dark:bg-gray-800 mb-4'):
+                category_info = self.data_service.get_category_info(category)
+
+                ui.label(f'Категория: {category_info["name"]}').classes('text-xl font-bold mb-4')
+
+                with ui.row().classes('flex-wrap gap-4'):
+                    for loc in category_info["locations"]:
+                        with ui.card().classes(
+                                'p-4 rounded-xl shadow'
+                                'w-full sm:w-[48%] md:w-[30%] lg:w-[23%] transition'
+                        ):
+                            ui.label(loc).classes('text-lg font-semibold text-center')
 
             # Список игроков с голосованием
             with ui.card().classes('w-full p-6 rounded-xl shadow-lg bg-gray-100 dark:bg-gray-800 mb-4'):

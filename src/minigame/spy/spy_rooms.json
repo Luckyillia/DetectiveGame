@@ -1,54 +1,36 @@
 {
-  "spy_5824": {
-    "room_id": "spy_5824",
-    "created_at": 1748120479,
-    "last_activity": 1748121181,
+  "spy_5284": {
+    "room_id": "spy_5284",
+    "created_at": 1748695105,
+    "last_activity": 1748695914,
     "status": "playing",
-    "host_id": "0e5ad786-861b-4fc7-8f7f-41c3a65e5b76",
+    "host_id": "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae",
     "players": [
       {
-        "id": "0e5ad786-861b-4fc7-8f7f-41c3a65e5b76",
-        "name": "Sebastyan",
+        "id": "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae",
+        "name": "lucky_illia",
         "is_host": true,
-        "joined_at": 1748120504,
-        "last_action": 1748121178,
+        "joined_at": 1748695105,
+        "last_action": 1748695171,
         "is_ready": true
+      },
+      {
+        "id": "6b652e65-7cf9-4377-8031-192076a4e125",
+        "name": "test1",
+        "is_host": false,
+        "joined_at": 1748695127,
+        "last_action": 1748695171,
+        "is_ready": false
       }
     ],
     "game_data": {
-      "category": "Украина",
-      "location": "Лагерь «Азовец»",
+      "category": "Постапокалипсис",
+      "location": "Лагерь кочевников",
       "spy_index": 0,
       "votes": {},
       "round": 1,
       "time_per_round": 300,
-      "round_start_time": 1748121159
-    }
-  },
-  "spy_1099": {
-    "room_id": "spy_1099",
-    "created_at": 1748121553,
-    "last_activity": 1748121650,
-    "status": "playing",
-    "host_id": "0e5ad786-861b-4fc7-8f7f-41c3a65e5b76",
-    "players": [
-      {
-        "id": "0e5ad786-861b-4fc7-8f7f-41c3a65e5b76",
-        "name": "Sebastyan",
-        "is_host": true,
-        "joined_at": 1748121553,
-        "last_action": 1748121575,
-        "is_ready": true
-      }
-    ],
-    "game_data": {
-      "category": "Украина",
-      "location": "Фестиваль «Казантип»",
-      "spy_index": 1,
-      "votes": {},
-      "round": 1,
-      "time_per_round": 300,
-      "round_start_time": 1748121575
+      "round_start_time": 1748695171
     }
   }
 }

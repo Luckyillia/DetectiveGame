@@ -11,3 +11,4 @@ venv/
 .nicegui/
 /backup
 .env
+src/minigame/codenames/emoji.json

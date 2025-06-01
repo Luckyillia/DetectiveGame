@@ -58,5 +58,57 @@
         "Стамбул"
       ]
     }
+  },
+  "chameleon_6174": {
+    "room_id": "chameleon_6174",
+    "created_at": 1748443801,
+    "last_activity": 1748443853,
+    "status": "playing",
+    "host_id": "6b652e65-7cf9-4377-8031-192076a4e125",
+    "players": [
+      {
+        "id": "6b652e65-7cf9-4377-8031-192076a4e125",
+        "name": "test1",
+        "is_host": true,
+        "joined_at": 1748443801,
+        "last_action": 1748443843,
+        "is_ready": true
+      },
+      {
+        "id": "68d50bda-7a0c-43b4-a5a6-178693f37a3c",
+        "name": "Хаха",
+        "is_host": false,
+        "joined_at": 1748443810,
+        "last_action": 1748443843,
+        "is_ready": false
+      }
+    ],
+    "game_data": {
+      "category": "Одежда",
+      "word": "Платье",
+      "chameleon_index": 1,
+      "descriptions": [],
+      "votes": {},
+      "round": 1,
+      "current_player_index": 0,
+      "grid_words": [
+        "Шорты",
+        "Перчатки",
+        "Шапка",
+        "Джинсы",
+        "Носки",
+        "Брюки",
+        "Платье",
+        "Пальто",
+        "Куртка",
+        "Свитер",
+        "Рубашка",
+        "Обувь",
+        "Пижама",
+        "Галстук",
+        "Футболка",
+        "Юбка"
+      ]
+    }
   }
 }
