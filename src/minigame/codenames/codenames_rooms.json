@@ -1,0 +1,77 @@
+{
+  "codenames_8530": {
+    "room_id": "codenames_8530",
+    "created_at": 1748789443,
+    "last_activity": 1748789612,
+    "status": "waiting",
+    "host_id": "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae",
+    "settings": {
+      "team_count": 2,
+      "hint_mode": "written"
+    },
+    "teams": {
+      "1": {
+        "captain": "6b652e65-7cf9-4377-8031-192076a4e125",
+        "members": [
+          "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae"
+        ],
+        "color": "bg-red-500",
+        "name": "Красная"
+      },
+      "2": {
+        "captain": "42ce3bc8-67ae-4131-aa66-0e7a730ec65f",
+        "members": [
+          "68d50bda-7a0c-43b4-a5a6-178693f37a3c"
+        ],
+        "color": "bg-blue-500",
+        "name": "Синяя"
+      }
+    },
+    "players": [
+      {
+        "id": "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae",
+        "name": "lucky_illia",
+        "is_host": true,
+        "joined_at": 1748789443,
+        "last_action": 1748789545,
+        "team": "1",
+        "role": "member"
+      },
+      {
+        "id": "6b652e65-7cf9-4377-8031-192076a4e125",
+        "name": "test1",
+        "is_host": false,
+        "joined_at": 1748789533,
+        "last_action": 1748789541,
+        "team": "1",
+        "role": "captain"
+      },
+      {
+        "id": "42ce3bc8-67ae-4131-aa66-0e7a730ec65f",
+        "name": "test2",
+        "is_host": false,
+        "joined_at": 1748789581,
+        "last_action": 1748789583,
+        "team": "2",
+        "role": "captain"
+      },
+      {
+        "id": "68d50bda-7a0c-43b4-a5a6-178693f37a3c",
+        "name": "Хаха",
+        "is_host": false,
+        "joined_at": 1748789611,
+        "last_action": 1748789612,
+        "team": "2",
+        "role": "member"
+      }
+    ],
+    "game_data": {
+      "field": [],
+      "current_team": 1,
+      "current_hint": null,
+      "round": 0,
+      "turn_order": [],
+      "game_started": false
+    }
+  }
+}
