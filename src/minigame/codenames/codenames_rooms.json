@@ -1,26 +1,28 @@
 {
-  "codenames_5617": {
-    "room_id": "codenames_5617",
-    "created_at": 1748822548,
-    "last_activity": 1748822618,
-    "status": "waiting",
+  "codenames_1039": {
+    "room_id": "codenames_1039",
+    "created_at": 1748883815,
+    "last_activity": 1748883937,
+    "status": "playing",
     "host_id": "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae",
     "settings": {
       "team_count": 2,
-      "hint_mode": "written"
+      "hint_mode": "verbal"
     },
     "teams": {
       "1": {
-        "captain": "42ce3bc8-67ae-4131-aa66-0e7a730ec65f",
+        "captain": "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae",
         "members": [
-          "6b652e65-7cf9-4377-8031-192076a4e125"
+          "42ce3bc8-67ae-4131-aa66-0e7a730ec65f"
         ],
         "color": "bg-red-500",
         "name": "Красная"
       },
       "2": {
-        "captain": "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae",
-        "members": [],
+        "captain": "6b652e65-7cf9-4377-8031-192076a4e125",
+        "members": [
+          "68d50bda-7a0c-43b4-a5a6-178693f37a3c"
+        ],
         "color": "bg-blue-500",
         "name": "Синяя"
       }
@@ -30,37 +32,225 @@
         "id": "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae",
         "name": "lucky_illia",
         "is_host": true,
-        "joined_at": 1748822548,
-        "last_action": 1748822618,
-        "team": "2",
+        "joined_at": 1748883815,
+        "last_action": 1748883937,
+        "team": "1",
         "role": "captain"
       },
       {
         "id": "6b652e65-7cf9-4377-8031-192076a4e125",
         "name": "test1",
         "is_host": false,
-        "joined_at": 1748822552,
-        "last_action": 1748822605,
-        "team": "1",
+        "joined_at": 1748883818,
+        "last_action": 1748883937,
+        "team": "2",
+        "role": "captain"
+      },
+      {
+        "id": "68d50bda-7a0c-43b4-a5a6-178693f37a3c",
+        "name": "Хаха",
+        "is_host": false,
+        "joined_at": 1748883824,
+        "last_action": 1748883937,
+        "team": "2",
         "role": "member"
       },
       {
         "id": "42ce3bc8-67ae-4131-aa66-0e7a730ec65f",
         "name": "test2",
         "is_host": false,
-        "joined_at": 1748822554,
-        "last_action": 1748822597,
+        "joined_at": 1748883827,
+        "last_action": 1748883937,
         "team": "1",
-        "role": "captain"
+        "role": "member"
       }
     ],
     "game_data": {
-      "field": [],
-      "current_team": 1,
+      "field": [
+        {
+          "emoji": "🔟",
+          "team": 0,
+          "revealed": false,
+          "row": 0,
+          "col": 0
+        },
+        {
+          "emoji": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+          "team": 1,
+          "revealed": false,
+          "row": 0,
+          "col": 1
+        },
+        {
+          "emoji": "♥",
+          "team": 2,
+          "revealed": false,
+          "row": 0,
+          "col": 2
+        },
+        {
+          "emoji": "🇱🇷",
+          "team": 2,
+          "revealed": false,
+          "row": 0,
+          "col": 3
+        },
+        {
+          "emoji": "🪻",
+          "team": 1,
+          "revealed": false,
+          "row": 0,
+          "col": 4
+        },
+        {
+          "emoji": "🐋",
+          "team": 0,
+          "revealed": false,
+          "row": 1,
+          "col": 0
+        },
+        {
+          "emoji": "🍻",
+          "team": 1,
+          "revealed": false,
+          "row": 1,
+          "col": 1
+        },
+        {
+          "emoji": "🏳",
+          "team": 2,
+          "revealed": false,
+          "row": 1,
+          "col": 2
+        },
+        {
+          "emoji": "⛲",
+          "team": 2,
+          "revealed": false,
+          "row": 1,
+          "col": 3
+        },
+        {
+          "emoji": "🛫",
+          "team": 0,
+          "revealed": false,
+          "row": 1,
+          "col": 4
+        },
+        {
+          "emoji": "🍋‍🟩",
+          "team": 2,
+          "revealed": false,
+          "row": 2,
+          "col": 0
+        },
+        {
+          "emoji": "📻",
+          "team": 1,
+          "revealed": false,
+          "row": 2,
+          "col": 1
+        },
+        {
+          "emoji": "⤴",
+          "team": 0,
+          "revealed": false,
+          "row": 2,
+          "col": 2
+        },
+        {
+          "emoji": "🥏",
+          "team": 0,
+          "revealed": false,
+          "row": 2,
+          "col": 3
+        },
+        {
+          "emoji": "👒",
+          "team": -1,
+          "revealed": false,
+          "row": 2,
+          "col": 4
+        },
+        {
+          "emoji": "👨‍🍳",
+          "team": 0,
+          "revealed": false,
+          "row": 3,
+          "col": 0
+        },
+        {
+          "emoji": "👨‍👩‍👧",
+          "team": 2,
+          "revealed": false,
+          "row": 3,
+          "col": 1
+        },
+        {
+          "emoji": "🟣",
+          "team": 0,
+          "revealed": false,
+          "row": 3,
+          "col": 2
+        },
+        {
+          "emoji": "😶",
+          "team": 2,
+          "revealed": false,
+          "row": 3,
+          "col": 3
+        },
+        {
+          "emoji": "😟",
+          "team": 1,
+          "revealed": false,
+          "row": 3,
+          "col": 4
+        },
+        {
+          "emoji": "🤷‍♀️",
+          "team": 1,
+          "revealed": false,
+          "row": 4,
+          "col": 0
+        },
+        {
+          "emoji": "🧂",
+          "team": 1,
+          "revealed": false,
+          "row": 4,
+          "col": 1
+        },
+        {
+          "emoji": "🪼",
+          "team": 1,
+          "revealed": false,
+          "row": 4,
+          "col": 2
+        },
+        {
+          "emoji": "🌱",
+          "team": 1,
+          "revealed": false,
+          "row": 4,
+          "col": 3
+        },
+        {
+          "emoji": "👵",
+          "team": 2,
+          "revealed": false,
+          "row": 4,
+          "col": 4
+        }
+      ],
+      "current_team": 2,
       "current_hint": null,
-      "round": 0,
-      "turn_order": [],
-      "game_started": false
+      "round": 1,
+      "turn_order": [
+        2,
+        1
+      ],
+      "game_started": true
     }
   }
 }

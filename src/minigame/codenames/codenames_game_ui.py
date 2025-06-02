@@ -22,13 +22,23 @@ class CodenamesGameUI:
 
         self.current_room_id = None
         self.player_name = ""
+        self.player_id = None  # Добавляем явное хранение ID игрока
         self.game_container = None
         self.last_update_time = 0
         self.update_timer = None
         self.rooms_update_timer = None
 
+    def _ensure_player_id(self):
+        """Гарантирует, что у нас есть правильный ID игрока"""
+        if not self.player_id:
+            self.player_id = app.storage.user.get('user_id')
+        return self.player_id
+
     def show_main_menu(self, container=None):
         """Показывает главное меню игры."""
+        # Обновляем ID игрока
+        self.player_id = self._ensure_player_id()
+
         # Восстанавливаем сохраненный ID комнаты при перезагрузке
         saved_room_id = app.storage.user.get('codenames_room_id')
         if saved_room_id and not self.current_room_id:
@@ -39,7 +49,7 @@ class CodenamesGameUI:
                 self.player_name = app.storage.user.get('username', '')
                 success = self.room_service.add_player(
                     saved_room_id,
-                    app.storage.user.get('user_id'),
+                    self.player_id,
                     self.player_name
                 )
                 if success:
@@ -221,8 +231,11 @@ class CodenamesGameUI:
             ui.notify('Введите ваше имя', type='warning')
             return
 
+        # Обновляем ID игрока перед созданием
+        self.player_id = self._ensure_player_id()
+
         room_id = self.room_service.create_room(
-            app.storage.user.get('user_id'),
+            self.player_id,
             self.player_name
         )
 
@@ -232,6 +245,16 @@ class CodenamesGameUI:
 
         self.current_room_id = room_id
         app.storage.user.update({'codenames_room_id': room_id})
+
+        # Логируем создание комнаты
+        self.log_service.add_log(
+            level="GAME",
+            action="CODENAMES_ROOM_CREATED",
+            message=f"Создана комната {room_id}",
+            user_id=self.player_id,
+            metadata={"room_id": room_id, "player_name": self.player_name}
+        )
+
         self.show_waiting_room()
 
     def show_join_menu(self):
@@ -274,9 +297,12 @@ class CodenamesGameUI:
             ui.notify('Введите ваше имя', type='warning')
             return
 
+        # Обновляем ID игрока
+        self.player_id = self._ensure_player_id()
+
         success = self.room_service.add_player(
             room_id,
-            app.storage.user.get('user_id'),
+            self.player_id,
             self.player_name
         )
 
@@ -307,26 +333,31 @@ class CodenamesGameUI:
             self.show_main_menu()
             return
 
-        # ИСПРАВЛЕНИЕ: Очищаем контейнер только при первом показе
+        # Обновляем ID игрока
+        self.player_id = self._ensure_player_id()
+
+        # Очищаем контейнер только при первом показе
         if not hasattr(self, '_waiting_room_shown'):
             self.game_container.clear()
             self._waiting_room_shown = True
 
         # Отменяем существующие таймеры и создаем новый
         self._cancel_timers()
-        self.update_timer = ui.timer(2.0, lambda: self.update_waiting_room())  # Увеличиваем интервал
+        self.update_timer = ui.timer(2.0, lambda: self.update_waiting_room())
 
-        current_user_id = app.storage.user.get('user_id')
-        current_player = next((p for p in room_data["players"] if p["id"] == current_user_id), None)
+        current_player = next((p for p in room_data["players"] if p["id"] == self.player_id), None)
         is_host = current_player and current_player.get("is_host", False)
 
         # Создаем или обновляем контент
-        self._render_waiting_room_content(room_data, current_user_id, is_host)
+        self._render_waiting_room_content(room_data, is_host)
 
-    def _render_waiting_room_content(self, room_data, current_user_id, is_host):
+    def _render_waiting_room_content(self, room_data, is_host):
         """Рендерит содержимое комнаты ожидания"""
         # Очищаем контейнер каждый раз при рендеринге
         self.game_container.clear()
+
+        # Получаем настройки комнаты для определения, кто может создавать команды
+        allow_all_create_teams = room_data.get("settings", {}).get("allow_all_create_teams", True)
 
         with self.game_container:
             with ui.card().classes('w-full p-6 rounded-xl shadow-lg bg-gray-100 dark:bg-gray-800'):
@@ -355,7 +386,6 @@ class CodenamesGameUI:
 
                         # Показываем требования для начала игры
                         if teams_count >= 2:
-                            # Проверяем, есть ли в каждой команде капитан
                             ready_teams = sum(1 for team in room_data["teams"].values() if team.get("captain"))
                             if ready_teams >= 2:
                                 ui.label('✅ Готово к началу игры!').classes(
@@ -367,12 +397,12 @@ class CodenamesGameUI:
                             ui.label('⏳ Нужно минимум 2 команды').classes(
                                 'text-yellow-600 dark:text-yellow-400 text-center font-medium')
 
-                    # Выбор команды
-                    self.components.create_team_selection(
+                    # Выбор команды с проверкой прав
+                    can_create_teams = is_host or allow_all_create_teams
+                    self._create_team_selection_with_permissions(
                         room_data["teams"],
                         room_data["settings"]["team_count"],
-                        self.join_team_with_validation,
-                        current_user_id
+                        can_create_teams
                     )
 
                     # Настройки игры (только для хоста)
@@ -393,7 +423,7 @@ class CodenamesGameUI:
                             self.components.create_player_table(
                                 room_data["players"],
                                 room_data["teams"],
-                                current_user_id
+                                self.player_id
                             )
                         except Exception as e:
                             ui.label(f'Ошибка таблицы игроков: {str(e)}').classes('text-red-500')
@@ -419,7 +449,7 @@ class CodenamesGameUI:
                                 success = self.room_service.start_game(self.current_room_id, field)
                                 if success:
                                     ui.notify('Игра началась!', type='positive')
-                                    self._waiting_room_shown = False  # Сбрасываем флаг
+                                    self._waiting_room_shown = False
                                     self.show_game_screen()
                                 else:
                                     ui.notify('Ошибка при запуске игры', type='negative')
@@ -442,6 +472,122 @@ class CodenamesGameUI:
             ui.button('Выйти из игры', icon='exit_to_app', on_click=self.leave_game).classes(
                 'w-full bg-red-500 hover:bg-red-600 text-white mt-4')
 
+    def _create_team_selection_with_permissions(self, teams, max_teams, can_create_teams):
+        """Создает интерфейс выбора команды с учетом прав"""
+        with ui.card().classes('w-full p-4 mb-4 bg-blue-50 dark:bg-blue-900 rounded-lg shadow'):
+            ui.label('Выбор команды').classes('font-bold mb-3 text-lg text-blue-800 dark:text-blue-200')
+
+            # Показываем текущую команду игрока
+            current_team = None
+            current_role = None
+
+            # Находим текущую команду игрока
+            for team_id, team in teams.items():
+                if team.get('captain') == self.player_id:
+                    current_team = team_id
+                    current_role = 'captain'
+                    break
+                elif self.player_id in team.get('members', []):
+                    current_team = team_id
+                    current_role = 'member'
+                    break
+
+            # Отображаем текущий статус игрока
+            if current_team:
+                team_name = teams[current_team].get('name', f'Команда {current_team}')
+                role_text = 'Капитан' if current_role == 'captain' else 'Участник'
+                with ui.card().classes('w-full p-3 mb-4 bg-green-100 dark:bg-green-800 rounded-lg'):
+                    ui.label(f'Ваша команда: {team_name} ({role_text})').classes(
+                        'font-bold text-green-800 dark:text-green-200 text-center')
+            else:
+                with ui.card().classes('w-full p-3 mb-4 bg-yellow-100 dark:bg-yellow-800 rounded-lg'):
+                    ui.label('Вы не в команде. Выберите или создайте команду.').classes(
+                        'font-bold text-yellow-800 dark:text-yellow-200 text-center')
+
+            # Показываем существующие команды
+            if teams:
+                ui.label('Существующие команды:').classes('font-medium mb-2')
+                for team_id, team in teams.items():
+                    team_color = team.get('color', 'bg-gray-500')
+                    team_name = team.get('name', f'Команда {team_id}')
+                    captain_id = team.get('captain')
+                    members = team.get('members', [])
+
+                    with ui.row().classes('w-full items-center mb-2 p-3 bg-white dark:bg-gray-800 rounded-lg border'):
+                        # Индикатор цвета команды
+                        ui.element('div').classes(f'{team_color} w-6 h-6 rounded mr-3')
+
+                        # Информация о команде
+                        with ui.column().classes('flex-grow'):
+                            ui.label(f'{team_name}').classes('font-bold text-lg')
+                            ui.label(f'Участников: {1 + len(members)} (капитан + {len(members)} участников)').classes(
+                                'text-sm text-gray-600 dark:text-gray-400')
+
+                        # Кнопки действий - создаем замыкание правильно
+                        with ui.column().classes('gap-1'):
+                            # Если есть капитан, можно присоединиться как участник
+                            if captain_id and captain_id != self.player_id:
+                                if self.player_id not in members:
+                                    # Создаем функцию-обертку для правильного захвата team_id
+                                    def make_join_handler(t_id):
+                                        return lambda: self.join_team_with_validation(t_id, 'member')
+
+                                    ui.button('Присоединиться',
+                                              on_click=make_join_handler(team_id)).classes(
+                                        'bg-blue-500 text-white text-sm')
+                                else:
+                                    ui.label('Вы участник').classes('text-green-600 text-sm font-medium')
+
+                            # Логика для капитанства
+                            if not captain_id and can_create_teams:
+                                # Если нет капитана и есть права - можно стать капитаном
+                                def make_captain_handler(t_id):
+                                    return lambda: self.join_team_with_validation(t_id, 'captain')
+
+                                ui.button('Стать капитаном',
+                                          on_click=make_captain_handler(team_id)).classes(
+                                    'bg-green-500 text-white text-sm')
+                            elif captain_id == self.player_id:
+                                # Если игрок уже капитан этой команды
+                                ui.label('Вы капитан').classes('text-yellow-600 text-sm font-bold')
+                            elif not captain_id and not can_create_teams:
+                                # Нет капитана, но нет прав создавать
+                                ui.label('Нужен капитан').classes('text-red-500 text-sm')
+                            else:
+                                # У команды есть капитан
+                                ui.label('Есть капитан').classes('text-gray-500 text-sm')
+
+            # Кнопки для создания новых команд
+            if can_create_teams:
+                ui.label('Создать новую команду:').classes('font-medium mb-2 mt-4')
+
+                available_teams = []
+                for team_id in range(1, max_teams + 1):
+                    if str(team_id) not in teams:
+                        available_teams.append(team_id)
+
+                if available_teams:
+                    with ui.row().classes('flex-wrap gap-2'):
+                        for team_id in available_teams:
+                            team_colors_names = {
+                                1: "Красная", 2: "Синяя", 3: "Зеленая",
+                                4: "Фиолетовая", 5: "Оранжевая"
+                            }
+                            team_name = team_colors_names.get(team_id, f"Команда {team_id}")
+
+                            # Создаем функцию-обертку для правильного захвата team_id
+                            def make_create_handler(t_id):
+                                return lambda: self.join_team_with_validation(str(t_id), 'captain')
+
+                            ui.button(f'Создать {team_name}',
+                                      on_click=make_create_handler(team_id)).classes(
+                                'mb-1 bg-purple-500 text-white')
+                else:
+                    ui.label('Все команды созданы').classes('text-gray-500 italic')
+            else:
+                ui.label('Только создатель комнаты может создавать новые команды').classes(
+                    'text-gray-500 italic mt-4')
+
     def update_waiting_room(self):
         """Обновляет данные в комнате ожидания."""
         if not self.current_room_id:
@@ -461,27 +607,26 @@ class CodenamesGameUI:
             # Если статус изменился на playing, переходим на экран игры
             if room_data["status"] == "playing":
                 self.last_update_time = room_data.get("last_activity", 0)
-                self._waiting_room_shown = False  # Сбрасываем флаг
+                self._waiting_room_shown = False
                 self.show_game_screen()
                 return
 
-            # ИСПРАВЛЕНИЕ: Обновляем только при изменении данных
+            # Обновляем только при изменении данных
             if room_data.get("last_activity", 0) > self.last_update_time:
                 self.last_update_time = room_data.get("last_activity", 0)
 
-                current_user_id = app.storage.user.get('user_id')
-                current_player = next((p for p in room_data["players"] if p["id"] == current_user_id), None)
+                current_player = next((p for p in room_data["players"] if p["id"] == self.player_id), None)
                 is_host = current_player and current_player.get("is_host", False)
 
                 # Перерисовываем только содержимое
-                self._render_waiting_room_content(room_data, current_user_id, is_host)
+                self._render_waiting_room_content(room_data, is_host)
 
         except Exception as e:
             # Логируем ошибку и продолжаем
             self.log_service.add_error_log(
                 error_message=f"Ошибка обновления комнаты ожидания: {str(e)}",
                 action="CODENAMES_UPDATE_ERROR",
-                user_id=app.storage.user.get('user_id')
+                user_id=self.player_id
             )
             print(f"Ошибка обновления комнаты ожидания: {e}")
 
@@ -500,12 +645,28 @@ class CodenamesGameUI:
                 ui.notify('Комната не найдена', type='negative')
                 return
 
-            current_user_id = app.storage.user.get('user_id')
+            # Используем сохраненный ID игрока
+            if not self.player_id:
+                self.player_id = self._ensure_player_id()
+
+            # Логируем попытку присоединения
+            self.log_service.add_log(
+                level="GAME",
+                action="CODENAMES_JOIN_TEAM_ATTEMPT",
+                message=f"Попытка присоединиться к команде {team_id} как {role}",
+                user_id=self.player_id,
+                metadata={
+                    "room_id": self.current_room_id,
+                    "team_id": team_id,
+                    "role": role,
+                    "player_name": self.player_name
+                }
+            )
 
             # Получаем доступные действия для валидации
             available_actions = self.room_service.get_available_team_actions(
                 self.current_room_id,
-                current_user_id
+                self.player_id
             )
 
             if "error" in available_actions:
@@ -516,7 +677,7 @@ class CodenamesGameUI:
             if role == "captain":
                 if team_id in room_data["teams"] and room_data["teams"][team_id].get("captain"):
                     existing_captain_id = room_data["teams"][team_id]["captain"]
-                    if existing_captain_id != current_user_id:
+                    if existing_captain_id != self.player_id:
                         # Находим имя существующего капитана
                         captain_name = next(
                             (p["name"] for p in room_data["players"] if p["id"] == existing_captain_id),
@@ -548,14 +709,14 @@ class CodenamesGameUI:
                     ui.notify(f'У команды {team_id} нет капитана', type='warning')
                     return
 
-                if current_user_id in room_data["teams"][team_id].get("members", []):
+                if self.player_id in room_data["teams"][team_id].get("members", []):
                     ui.notify('Вы уже участник этой команды', type='info')
                     return
 
-            # Выполняем присоединение
+            # Выполняем присоединение с явным ID игрока
             success = self.room_service.join_team(
                 self.current_room_id,
-                current_user_id,
+                self.player_id,
                 team_id,
                 role
             )
@@ -576,12 +737,13 @@ class CodenamesGameUI:
                     level="GAME",
                     action="CODENAMES_JOIN_TEAM_SUCCESS",
                     message=f"Игрок успешно присоединился к команде {team_id} как {role}",
-                    user_id=current_user_id,
+                    user_id=self.player_id,
                     metadata={
                         "room_id": self.current_room_id,
                         "team_id": team_id,
                         "role": role,
-                        "team_name": team_name
+                        "team_name": team_name,
+                        "player_name": self.player_name
                     }
                 )
 
@@ -594,8 +756,13 @@ class CodenamesGameUI:
                 self.log_service.add_error_log(
                     error_message=f"Неудачная попытка присоединения к команде {team_id} как {role}",
                     action="CODENAMES_JOIN_TEAM_FAILED",
-                    user_id=current_user_id,
-                    metadata={"room_id": self.current_room_id, "team_id": team_id, "role": role}
+                    user_id=self.player_id,
+                    metadata={
+                        "room_id": self.current_room_id,
+                        "team_id": team_id,
+                        "role": role,
+                        "player_name": self.player_name
+                    }
                 )
 
         except Exception as e:
@@ -603,7 +770,7 @@ class CodenamesGameUI:
             self.log_service.add_error_log(
                 error_message=f"Исключение при присоединении к команде: {str(e)}",
                 action="CODENAMES_JOIN_TEAM_EXCEPTION",
-                user_id=app.storage.user.get('user_id'),
+                user_id=self.player_id,
                 metadata={"team_id": team_id, "role": role}
             )
 
@@ -666,7 +833,7 @@ class CodenamesGameUI:
                     level="GAME",
                     action="CODENAMES_SETTINGS_UPDATE",
                     message=f"Обновлены настройки игры",
-                    user_id=app.storage.user.get('user_id'),
+                    user_id=self.player_id,
                     metadata={"room_id": self.current_room_id, "new_settings": settings}
                 )
 
@@ -706,8 +873,7 @@ class CodenamesGameUI:
         self._cancel_timers()
         self.update_timer = ui.timer(1.0, lambda: self.update_game_screen())
 
-        current_user_id = app.storage.user.get('user_id')
-        current_player = next((p for p in room_data["players"] if p["id"] == current_user_id), None)
+        current_player = next((p for p in room_data["players"] if p["id"] == self.player_id), None)
 
         if not current_player:
             ui.notify('Игрок не найден в комнате', type='negative')
@@ -761,7 +927,7 @@ class CodenamesGameUI:
                 self.components.create_player_table(
                     room_data["players"],
                     room_data["teams"],
-                    current_user_id
+                    self.player_id
                 )
 
             # Проверяем, не завершена ли игра
@@ -804,7 +970,7 @@ class CodenamesGameUI:
 
         success = self.room_service.set_hint(
             self.current_room_id,
-            app.storage.user.get('user_id'),
+            self.player_id,
             hint_text,
             hint_count
         )
@@ -822,7 +988,7 @@ class CodenamesGameUI:
 
         success = self.room_service.make_guess(
             self.current_room_id,
-            app.storage.user.get('user_id'),
+            self.player_id,
             card_index
         )
 
@@ -838,7 +1004,7 @@ class CodenamesGameUI:
 
         success = self.room_service.end_turn(
             self.current_room_id,
-            app.storage.user.get('user_id')
+            self.player_id
         )
 
         if success:
@@ -892,7 +1058,7 @@ class CodenamesGameUI:
 
         success = self.room_service.remove_player(
             self.current_room_id,
-            app.storage.user.get('user_id')
+            self.player_id
         )
 
         if success:
@@ -901,5 +1067,6 @@ class CodenamesGameUI:
             ui.notify('Ошибка при выходе из игры', type='warning')
 
         self.current_room_id = None
+        self.player_id = None
         app.storage.user.update({'codenames_room_id': None})
         self.show_main_menu()
