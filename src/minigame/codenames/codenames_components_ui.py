@@ -156,7 +156,7 @@ class CodenamesComponents:
         with ui.card().classes('w-full p-4 mb-4 bg-blue-50 dark:bg-blue-900 rounded-lg shadow'):
             ui.label('Выбор команды').classes('font-bold mb-3 text-lg text-blue-800 dark:text-blue-200')
 
-            # ИСПРАВЛЕНИЕ: Показываем текущую команду игрока
+            # Показываем текущую команду игрока
             current_team = None
             current_role = None
 
@@ -192,7 +192,6 @@ class CodenamesComponents:
                     captain_id = team.get('captain')
                     members = team.get('members', [])
 
-                    # Находим имя капитана (это нужно передавать из родительского компонента)
                     with ui.row().classes('w-full items-center mb-2 p-3 bg-white dark:bg-gray-800 rounded-lg border'):
                         # Индикатор цвета команды
                         ui.element('div').classes(f'{team_color} w-6 h-6 rounded mr-3')
@@ -203,7 +202,7 @@ class CodenamesComponents:
                             ui.label(f'Участников: {1 + len(members)} (капитан + {len(members)} участников)').classes(
                                 'text-sm text-gray-600 dark:text-gray-400')
 
-                        # Кнопки действий
+                        # Кнопки действий - ИСПРАВЛЕНО
                         with ui.column().classes('gap-1'):
                             # Если есть капитан, можно присоединиться как участник
                             if captain_id and captain_id != current_user_id:
@@ -214,19 +213,21 @@ class CodenamesComponents:
                                 else:
                                     ui.label('Вы участник').classes('text-green-600 text-sm font-medium')
 
-                            # Если нет капитана или игрок хочет стать капитаном
+                            # ИСПРАВЛЕНИЕ: Логика для капитанства
                             if not captain_id:
+                                # Если нет капитана - любой может стать капитаном
                                 ui.button('Стать капитаном',
                                           on_click=lambda tid=team_id: join_team_handler(tid, 'captain')).classes(
                                     'bg-green-500 text-white text-sm')
                             elif captain_id == current_user_id:
+                                # Если игрок уже капитан этой команды
                                 ui.label('Вы капитан').classes('text-yellow-600 text-sm font-bold')
                             else:
-                                ui.button('Сменить капитана',
-                                          on_click=lambda tid=team_id: join_team_handler(tid, 'captain')).classes(
-                                    'bg-orange-500 text-white text-sm')
+                                # ИСПРАВЛЕНИЕ: Убираем кнопку "Сменить капитана" для других игроков
+                                # Вместо этого показываем информацию о том, что у команды есть капитан
+                                ui.label('Есть капитан').classes('text-gray-500 text-sm')
 
-            # ИСПРАВЛЕНИЕ: Кнопки для создания новых команд (показываем все доступные)
+            # Кнопки для создания новых команд (показываем все доступные)
             ui.label('Создать новую команду:').classes('font-medium mb-2 mt-4')
 
             available_teams = []
@@ -247,8 +248,6 @@ class CodenamesComponents:
                             'mb-1 bg-purple-500 text-white')
             else:
                 ui.label('Все команды созданы').classes('text-gray-500 italic')
-
-    # Исправленный метод create_game_settings в codenames_components_ui.py
 
     @staticmethod
     def create_game_settings(current_settings, update_handler, is_host=False):

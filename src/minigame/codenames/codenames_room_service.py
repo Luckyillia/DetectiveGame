@@ -327,7 +327,24 @@ class CodenamesRoomService:
         if not player:
             return False
 
-        # ИСПРАВЛЕНИЕ: Сначала удаляем игрока из старой команды
+        # ИСПРАВЛЕНИЕ: Добавляем проверки для предотвращения несанкционированной смены капитана
+        if role == "captain" and team_id in room["teams"]:
+            # Проверяем, может ли игрок стать капитаном этой команды
+            existing_captain = room["teams"][team_id]["captain"]
+
+            # Разрешаем стать капитаном только если:
+            # 1. У команды нет капитана (None или пустая строка)
+            # 2. Игрок уже является капитаном этой команды
+            if existing_captain and existing_captain != player_id:
+                self.log_service.add_error_log(
+                    error_message=f"Попытка захвата капитанства игроком {player_id} в команде {team_id}",
+                    action="CODENAMES_UNAUTHORIZED_CAPTAIN_CHANGE",
+                    user_id=player_id,
+                    metadata={"room_id": room_id, "team_id": team_id, "existing_captain": existing_captain}
+                )
+                return False
+
+        # Сначала удаляем игрока из старой команды
         if player.get("team"):
             old_team_id = player["team"]
             if old_team_id in room["teams"]:
@@ -369,24 +386,34 @@ class CodenamesRoomService:
                 "name": team_info["name"]
             }
         elif role == "captain" and team_id in room["teams"]:
-            # ИСПРАВЛЕНИЕ: Правильно меняем капитана команды
-            old_captain_id = room["teams"][team_id]["captain"]
+            # Устанавливаем капитана (проверка уже пройдена выше)
             room["teams"][team_id]["captain"] = player_id
-
-            # Если у команды был старый капитан, делаем его участником
-            if old_captain_id and old_captain_id != player_id:
-                if old_captain_id not in room["teams"][team_id]["members"]:
-                    room["teams"][team_id]["members"].append(old_captain_id)
-                # Обновляем роль старого капитана
-                for p in room["players"]:
-                    if p["id"] == old_captain_id:
-                        p["role"] = "member"
-                        break
-
         elif role == "member" and team_id in room["teams"]:
             # Добавляем игрока как участника
             if player_id not in room["teams"][team_id]["members"]:
                 room["teams"][team_id]["members"].append(player_id)
+
+            # ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: Убеждаемся, что игрок не является капитаном
+            if room["teams"][team_id]["captain"] == player_id:
+                # Если игрок был капитаном, но хочет стать участником,
+                # нужно найти нового капитана или удалить команду
+                if len(room["teams"][team_id]["members"]) > 1:
+                    # Назначаем другого участника капитаном
+                    new_members = [m for m in room["teams"][team_id]["members"] if m != player_id]
+                    new_captain_id = new_members[0]
+                    room["teams"][team_id]["captain"] = new_captain_id
+                    room["teams"][team_id]["members"] = [m for m in new_members if m != new_captain_id]
+                    room["teams"][team_id]["members"].append(player_id)
+
+                    # Обновляем роль нового капитана
+                    for p in room["players"]:
+                        if p["id"] == new_captain_id:
+                            p["role"] = "captain"
+                            break
+                else:
+                    # Если нет других участников, игрок остается капитаном
+                    room["teams"][team_id]["members"] = []
+                    role = "captain"  # Принудительно оставляем капитаном
 
         # Обновляем информацию игрока
         player["team"] = team_id
@@ -700,3 +727,175 @@ class CodenamesRoomService:
 
         rooms_list.sort(key=lambda x: x["created_at"], reverse=True)
         return rooms_list
+
+    @staticmethod
+    def _validate_team_action(room, player_id, team_id, role):
+        """
+        Валидирует возможность игрока выполнить действие с командой.
+
+        Args:
+            room: Данные комнаты
+            player_id: ID игрока
+            team_id: ID команды
+            role: Роль (captain/member)
+
+        Returns:
+            tuple: (bool успех, str сообщение об ошибке)
+        """
+
+        # Проверяем, что игрок существует
+        player = next((p for p in room["players"] if p["id"] == player_id), None)
+        if not player:
+            return False, "Игрок не найден в комнате"
+
+        # Проверяем валидность team_id
+        max_teams = room["settings"].get("team_count", 2)
+        try:
+            team_num = int(team_id)
+            if team_num < 1 or team_num > max_teams:
+                return False, f"Недопустимый ID команды: {team_id}"
+        except ValueError:
+            return False, f"Некорректный формат ID команды: {team_id}"
+
+        # Валидация для роли капитана
+        if role == "captain":
+            if team_id in room["teams"]:
+                existing_captain = room["teams"][team_id]["captain"]
+                if existing_captain and existing_captain != player_id:
+                    return False, f"У команды {team_id} уже есть капитан"
+
+            # Проверяем, не является ли игрок капитаном другой команды
+            for tid, team in room["teams"].items():
+                if tid != team_id and team["captain"] == player_id:
+                    # Это нормально - игрок может сменить команду
+                    pass
+
+        # Валидация для роли участника
+        elif role == "member":
+            if team_id not in room["teams"]:
+                return False, f"Команда {team_id} не существует"
+
+            if not room["teams"][team_id]["captain"]:
+                return False, f"У команды {team_id} нет капитана"
+
+        else:
+            return False, f"Недопустимая роль: {role}"
+
+        return True, "OK"
+
+    @staticmethod
+    def _cleanup_empty_teams(room):
+        """
+        Удаляет команды без игроков.
+
+        Args:
+            room: Данные комнаты
+
+        Returns:
+            int: Количество удаленных команд
+        """
+        teams_to_remove = []
+
+        for team_id, team in room["teams"].items():
+            captain = team.get("captain")
+            members = team.get("members", [])
+
+            # Проверяем, существуют ли игроки команды в комнате
+            captain_exists = captain and any(p["id"] == captain for p in room["players"])
+            valid_members = [m for m in members if any(p["id"] == m for p in room["players"])]
+
+            if not captain_exists and not valid_members:
+                teams_to_remove.append(team_id)
+            elif captain_exists and valid_members != members:
+                # Обновляем список участников, удаляя несуществующих
+                team["members"] = valid_members
+
+        # Удаляем пустые команды
+        for team_id in teams_to_remove:
+            del room["teams"][team_id]
+
+        return len(teams_to_remove)
+
+    @staticmethod
+    def _get_team_stats(room):
+        """
+        Получает статистику команд в комнате.
+
+        Args:
+            room: Данные комнаты
+
+        Returns:
+            dict: Статистика команд
+        """
+        stats = {
+            "total_teams": len(room["teams"]),
+            "teams_with_captains": 0,
+            "total_players_in_teams": 0,
+            "players_without_teams": 0
+        }
+
+        # Подсчитываем команды с капитанами
+        for team in room["teams"].values():
+            if team.get("captain"):
+                stats["teams_with_captains"] += 1
+                stats["total_players_in_teams"] += 1 + len(team.get("members", []))
+
+        # Подсчитываем игроков без команд
+        for player in room["players"]:
+            if not player.get("team"):
+                stats["players_without_teams"] += 1
+
+        return stats
+
+    def get_available_team_actions(self, room_id, player_id):
+        """
+        Возвращает список доступных действий для игрока с командами.
+
+        Args:
+            room_id: ID комнаты
+            player_id: ID игрока
+
+        Returns:
+            dict: Словарь доступных действий
+        """
+        room = self.get_room(room_id)
+        if not room:
+            return {"error": "Комната не найдена"}
+
+        player = next((p for p in room["players"] if p["id"] == player_id), None)
+        if not player:
+            return {"error": "Игрок не найден"}
+
+        current_team = player.get("team")
+        current_role = player.get("role")
+        max_teams = room["settings"].get("team_count", 2)
+
+        actions = {
+            "can_create_teams": [],
+            "can_join_as_member": [],
+            "can_become_captain": [],
+            "current_status": {
+                "team": current_team,
+                "role": current_role,
+                "team_name": room["teams"].get(current_team, {}).get("name", "") if current_team else None
+            }
+        }
+
+        # Определяем команды, которые можно создать
+        for team_id in range(1, max_teams + 1):
+            team_str = str(team_id)
+            if team_str not in room["teams"]:
+                actions["can_create_teams"].append(team_str)
+
+        # Определяем команды, к которым можно присоединиться
+        for team_id, team in room["teams"].items():
+            if team_id != current_team:
+                # Можно присоединиться как участник, если есть капитан
+                if team.get("captain") and player_id not in team.get("members", []):
+                    actions["can_join_as_member"].append(team_id)
+
+                # Можно стать капитаном, если его нет
+                if not team.get("captain"):
+                    actions["can_become_captain"].append(team_id)
+
+        return actions

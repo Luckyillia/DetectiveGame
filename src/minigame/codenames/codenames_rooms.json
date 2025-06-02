@@ -1,263 +1,28 @@
 {
-  "codenames_8530": {
-    "room_id": "codenames_8530",
-    "created_at": 1748789443,
-    "last_activity": 1748821642,
-    "status": "playing",
-    "host_id": "6b652e65-7cf9-4377-8031-192076a4e125",
+  "codenames_5617": {
+    "room_id": "codenames_5617",
+    "created_at": 1748822548,
+    "last_activity": 1748822618,
+    "status": "waiting",
+    "host_id": "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae",
     "settings": {
       "team_count": 2,
       "hint_mode": "written"
     },
     "teams": {
-      "2": {
-        "captain": "68d50bda-7a0c-43b4-a5a6-178693f37a3c",
+      "1": {
+        "captain": "42ce3bc8-67ae-4131-aa66-0e7a730ec65f",
         "members": [
-          "42ce3bc8-67ae-4131-aa66-0e7a730ec65f"
+          "6b652e65-7cf9-4377-8031-192076a4e125"
         ],
-        "color": "bg-blue-500",
-        "name": "Синяя"
-      }
-    },
-    "players": [
-      {
-        "id": "6b652e65-7cf9-4377-8031-192076a4e125",
-        "name": "test1",
-        "is_host": true,
-        "joined_at": 1748789533,
-        "last_action": 1748821642,
-        "team": null,
-        "role": null
+        "color": "bg-red-500",
+        "name": "Красная"
       },
-      {
-        "id": "42ce3bc8-67ae-4131-aa66-0e7a730ec65f",
-        "name": "test2",
-        "is_host": false,
-        "joined_at": 1748789581,
-        "last_action": 1748821599,
-        "team": "2",
-        "role": "member"
-      },
-      {
-        "id": "68d50bda-7a0c-43b4-a5a6-178693f37a3c",
-        "name": "Хаха",
-        "is_host": false,
-        "joined_at": 1748789611,
-        "last_action": 1748821599,
-        "team": "2",
-        "role": "captain"
-      }
-    ],
-    "game_data": {
-      "field": [
-        {
-          "emoji": "◀",
-          "team": 0,
-          "revealed": false,
-          "row": 0,
-          "col": 0
-        },
-        {
-          "emoji": "🏘",
-          "team": 2,
-          "revealed": false,
-          "row": 0,
-          "col": 1
-        },
-        {
-          "emoji": "🏣",
-          "team": 2,
-          "revealed": false,
-          "row": 0,
-          "col": 2
-        },
-        {
-          "emoji": "🕋",
-          "team": 1,
-          "revealed": false,
-          "row": 0,
-          "col": 3
-        },
-        {
-          "emoji": "💪",
-          "team": 0,
-          "revealed": false,
-          "row": 0,
-          "col": 4
-        },
-        {
-          "emoji": "🥋",
-          "team": 2,
-          "revealed": false,
-          "row": 1,
-          "col": 0
-        },
-        {
-          "emoji": "🇵🇫",
-          "team": 2,
-          "revealed": false,
-          "row": 1,
-          "col": 1
-        },
-        {
-          "emoji": "🕒",
-          "team": 0,
-          "revealed": false,
-          "row": 1,
-          "col": 2
-        },
-        {
-          "emoji": "💆",
-          "team": 2,
-          "revealed": false,
-          "row": 1,
-          "col": 3
-        },
-        {
-          "emoji": "🐂",
-          "team": 1,
-          "revealed": false,
-          "row": 1,
-          "col": 4
-        },
-        {
-          "emoji": "😖",
-          "team": 0,
-          "revealed": false,
-          "row": 2,
-          "col": 0
-        },
-        {
-          "emoji": "🙆‍♀️",
-          "team": 2,
-          "revealed": false,
-          "row": 2,
-          "col": 1
-        },
-        {
-          "emoji": "🦹",
-          "team": 1,
-          "revealed": false,
-          "row": 2,
-          "col": 2
-        },
-        {
-          "emoji": "🎌",
-          "team": 1,
-          "revealed": false,
-          "row": 2,
-          "col": 3
-        },
-        {
-          "emoji": "🥻",
-          "team": 1,
-          "revealed": false,
-          "row": 2,
-          "col": 4
-        },
-        {
-          "emoji": "🚱",
-          "team": 0,
-          "revealed": false,
-          "row": 3,
-          "col": 0
-        },
-        {
-          "emoji": "🧵",
-          "team": 2,
-          "revealed": false,
-          "row": 3,
-          "col": 1
-        },
-        {
-          "emoji": "🇨🇶",
-          "team": 0,
-          "revealed": false,
-          "row": 3,
-          "col": 2
-        },
-        {
-          "emoji": "🙅‍♀️",
-          "team": 1,
-          "revealed": false,
-          "row": 3,
-          "col": 3
-        },
-        {
-          "emoji": "⛱",
-          "team": 0,
-          "revealed": false,
-          "row": 3,
-          "col": 4
-        },
-        {
-          "emoji": "🤡",
-          "team": 1,
-          "revealed": false,
-          "row": 4,
-          "col": 0
-        },
-        {
-          "emoji": "🏄",
-          "team": 1,
-          "revealed": false,
-          "row": 4,
-          "col": 1
-        },
-        {
-          "emoji": "🍞",
-          "team": 2,
-          "revealed": false,
-          "row": 4,
-          "col": 2
-        },
-        {
-          "emoji": "💛",
-          "team": -1,
-          "revealed": false,
-          "row": 4,
-          "col": 3
-        },
-        {
-          "emoji": "🔕",
-          "team": 1,
-          "revealed": false,
-          "row": 4,
-          "col": 4
-        }
-      ],
-      "current_team": 2,
-      "current_hint": null,
-      "round": 1,
-      "turn_order": [
-        2,
-        1
-      ],
-      "game_started": true
-    }
-  },
-  "codenames_7900": {
-    "room_id": "codenames_7900",
-    "created_at": 1748821644,
-    "last_activity": 1748821703,
-    "status": "waiting",
-    "host_id": "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae",
-    "settings": {
-      "team_count": 3,
-      "hint_mode": "written"
-    },
-    "teams": {
       "2": {
         "captain": "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae",
         "members": [],
         "color": "bg-blue-500",
         "name": "Синяя"
-      },
-      "3": {
-        "captain": "6b652e65-7cf9-4377-8031-192076a4e125",
-        "members": [],
-        "color": "bg-green-500",
-        "name": "Зеленая"
       }
     },
     "players": [
@@ -265,8 +30,8 @@
         "id": "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae",
         "name": "lucky_illia",
         "is_host": true,
-        "joined_at": 1748821644,
-        "last_action": 1748821702,
+        "joined_at": 1748822548,
+        "last_action": 1748822618,
         "team": "2",
         "role": "captain"
       },
@@ -274,9 +39,18 @@
         "id": "6b652e65-7cf9-4377-8031-192076a4e125",
         "name": "test1",
         "is_host": false,
-        "joined_at": 1748821648,
-        "last_action": 1748821703,
-        "team": "3",
+        "joined_at": 1748822552,
+        "last_action": 1748822605,
+        "team": "1",
+        "role": "member"
+      },
+      {
+        "id": "42ce3bc8-67ae-4131-aa66-0e7a730ec65f",
+        "name": "test2",
+        "is_host": false,
+        "joined_at": 1748822554,
+        "last_action": 1748822597,
+        "team": "1",
         "role": "captain"
       }
     ],

@@ -1,11 +1,11 @@
-from nicegui import ui, app
-import time
 from datetime import datetime
 
+from nicegui import ui, app
+
+from src.minigame.codenames.codenames_components_ui import CodenamesComponents
 from src.minigame.codenames.codenames_data_service import CodenamesDataService
 from src.minigame.codenames.codenames_room_service import CodenamesRoomService
 from src.services.log.log_services import LogService
-from src.minigame.codenames.codenames_components_ui import CodenamesComponents
 
 
 class CodenamesGameUI:
@@ -371,7 +371,7 @@ class CodenamesGameUI:
                     self.components.create_team_selection(
                         room_data["teams"],
                         room_data["settings"]["team_count"],
-                        self.join_team,
+                        self.join_team_with_validation,
                         current_user_id
                     )
 
@@ -485,49 +485,171 @@ class CodenamesGameUI:
             )
             print(f"Ошибка обновления комнаты ожидания: {e}")
 
-    def join_team(self, team_id, role):
-        """Присоединяется к команде в указанной роли."""
+    def join_team_with_validation(self, team_id, role):
+        """
+        Присоединяется к команде с улучшенной валидацией и обработкой ошибок.
+        """
         if not self.current_room_id:
+            ui.notify('Ошибка: не выбрана комната', type='negative')
             return
 
         try:
+            # Получаем актуальные данные комнаты
+            room_data = self.room_service.get_room(self.current_room_id)
+            if not room_data:
+                ui.notify('Комната не найдена', type='negative')
+                return
+
+            current_user_id = app.storage.user.get('user_id')
+
+            # Получаем доступные действия для валидации
+            available_actions = self.room_service.get_available_team_actions(
+                self.current_room_id,
+                current_user_id
+            )
+
+            if "error" in available_actions:
+                ui.notify(f'Ошибка валидации: {available_actions["error"]}', type='negative')
+                return
+
+            # Проверяем, можно ли выполнить запрошенное действие
+            if role == "captain":
+                if team_id in room_data["teams"] and room_data["teams"][team_id].get("captain"):
+                    existing_captain_id = room_data["teams"][team_id]["captain"]
+                    if existing_captain_id != current_user_id:
+                        # Находим имя существующего капитана
+                        captain_name = next(
+                            (p["name"] for p in room_data["players"] if p["id"] == existing_captain_id),
+                            "Неизвестный игрок"
+                        )
+                        team_name = room_data["teams"][team_id].get("name", f"команды {team_id}")
+                        ui.notify(
+                            f'У {team_name} уже есть капитан: {captain_name}',
+                            type='warning'
+                        )
+                        return
+
+                # Проверяем лимит команд
+                if team_id not in room_data["teams"]:
+                    max_teams = room_data["settings"].get("team_count", 2)
+                    if int(team_id) > max_teams:
+                        ui.notify(
+                            f'Нельзя создать команду {team_id}. Максимум команд: {max_teams}',
+                            type='warning'
+                        )
+                        return
+
+            elif role == "member":
+                if team_id not in room_data["teams"]:
+                    ui.notify(f'Команда {team_id} не существует', type='warning')
+                    return
+
+                if not room_data["teams"][team_id].get("captain"):
+                    ui.notify(f'У команды {team_id} нет капитана', type='warning')
+                    return
+
+                if current_user_id in room_data["teams"][team_id].get("members", []):
+                    ui.notify('Вы уже участник этой команды', type='info')
+                    return
+
+            # Выполняем присоединение
             success = self.room_service.join_team(
                 self.current_room_id,
-                app.storage.user.get('user_id'),
+                current_user_id,
                 team_id,
                 role
             )
 
             if success:
+                # Определяем название команды и роль для уведомления
                 role_text = "капитаном" if role == "captain" else "участником"
                 team_colors = {
                     "1": "Красной", "2": "Синей", "3": "Зеленой",
                     "4": "Фиолетовой", "5": "Оранжевой"
                 }
                 team_name = team_colors.get(team_id, f"команды {team_id}")
+
                 ui.notify(f'Вы стали {role_text} {team_name} команды!', type='positive')
 
-                # Логируем присоединение к команде
+                # Логируем успешное присоединение
                 self.log_service.add_log(
                     level="GAME",
-                    action="CODENAMES_JOIN_TEAM_UI",
-                    message=f"Игрок присоединился к команде {team_id} как {role}",
-                    user_id=app.storage.user.get('user_id'),
-                    metadata={"room_id": self.current_room_id, "team_id": team_id, "role": role}
+                    action="CODENAMES_JOIN_TEAM_SUCCESS",
+                    message=f"Игрок успешно присоединился к команде {team_id} как {role}",
+                    user_id=current_user_id,
+                    metadata={
+                        "room_id": self.current_room_id,
+                        "team_id": team_id,
+                        "role": role,
+                        "team_name": team_name
+                    }
                 )
 
                 # Принудительно обновляем данные
                 self.last_update_time = 0
-
             else:
-                ui.notify('Ошибка при присоединении к команде', type='negative')
+                ui.notify('Ошибка при присоединении к команде. Попробуйте еще раз.', type='negative')
+
+                # Логируем неудачную попытку
+                self.log_service.add_error_log(
+                    error_message=f"Неудачная попытка присоединения к команде {team_id} как {role}",
+                    action="CODENAMES_JOIN_TEAM_FAILED",
+                    user_id=current_user_id,
+                    metadata={"room_id": self.current_room_id, "team_id": team_id, "role": role}
+                )
 
         except Exception as e:
-            ui.notify(f'Ошибка: {str(e)}', type='negative')
+            ui.notify(f'Произошла ошибка: {str(e)}', type='negative')
             self.log_service.add_error_log(
-                error_message=f"Ошибка присоединения к команде: {str(e)}",
-                action="CODENAMES_JOIN_TEAM_ERROR"
+                error_message=f"Исключение при присоединении к команде: {str(e)}",
+                action="CODENAMES_JOIN_TEAM_EXCEPTION",
+                user_id=app.storage.user.get('user_id'),
+                metadata={"team_id": team_id, "role": role}
             )
+
+    def validate_game_start_conditions(self, room_data):
+        """
+        Валидирует условия для начала игры и возвращает детальную информацию.
+
+        Returns:
+            tuple: (bool можно_начать, list сообщения_об_ошибках)
+        """
+        errors = []
+
+        # Проверяем количество команд
+        teams_count = len(room_data["teams"])
+        if teams_count < 2:
+            errors.append(f"Нужно минимум 2 команды (сейчас: {teams_count})")
+
+        # Проверяем капитанов
+        teams_without_captain = []
+        for team_id, team in room_data["teams"].items():
+            if not team.get("captain"):
+                team_name = team.get("name", f"Команда {team_id}")
+                teams_without_captain.append(team_name)
+
+        if teams_without_captain:
+            errors.append(f"Команды без капитанов: {', '.join(teams_without_captain)}")
+
+        # Проверяем общее количество игроков
+        total_players = len(room_data["players"])
+        if total_players < teams_count:
+            errors.append(f"Недостаточно игроков: нужно минимум {teams_count}, есть {total_players}")
+
+        # Проверяем, что все игроки в командах (опционально)
+        players_without_teams = [
+            p["name"] for p in room_data["players"]
+            if not p.get("team")
+        ]
+
+        if players_without_teams:
+            # Это предупреждение, а не ошибка
+            ui.notify(
+                f'Игроки вне команд: {", ".join(players_without_teams)}. Они не смогут участвовать в игре.',
+                type='warning'
+            )
+
+        return len(errors) == 0, errors
 
     def update_settings(self, settings):
         """Обновляет настройки игры."""
