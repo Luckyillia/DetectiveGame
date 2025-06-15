@@ -1,1 +1,42 @@
-{}
+{
+  "pairs_4280": {
+    "room_id": "pairs_4280",
+    "created_at": 1749994779,
+    "last_activity": 1749995408,
+    "status": "waiting",
+    "host_id": "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae",
+    "current_host_index": 0,
+    "rounds_played": 0,
+    "players": [
+      {
+        "id": "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae",
+        "name": "lucky_illia",
+        "is_host": true,
+        "joined_at": 1749994779,
+        "last_action": 1749995408,
+        "is_ready": true,
+        "score": 0,
+        "rounds_as_host": 0
+      },
+      {
+        "id": "6b652e65-7cf9-4377-8031-192076a4e125",
+        "name": "test1",
+        "is_host": false,
+        "joined_at": 1749994800,
+        "last_action": 1749994877,
+        "is_ready": false,
+        "score": 0,
+        "rounds_as_host": 0
+      }
+    ],
+    "game_data": {
+      "nouns": [],
+      "adjectives": [],
+      "host_pairings": {},
+      "player_guesses": {},
+      "round": 0,
+      "current_round_host": "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae",
+      "round_scores": {}
+    }
+  }
+}

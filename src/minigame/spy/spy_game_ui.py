@@ -342,8 +342,9 @@ class SpyGameUI:
                         ui.button(
                             'Копировать ID комнаты',
                             icon='content_copy',
-                            on_click=lambda: ui.notify('ID скопирован', type='positive')
-                        ).classes('bg-red-600 hover:bg-red-700 text-white')
+                            on_click=lambda: [ui.notify('ID скопирован', type='positive'),
+                                              ui.clipboard.write(room_data["room_id"])]
+                        ).classes('bg-blue-600 hover:bg-blue-700 text-white')
 
                     # Список игроков
                     with ui.card().classes('w-full p-4 mb-4 bg-gray-200 dark:bg-gray-700 rounded-lg shadow'):

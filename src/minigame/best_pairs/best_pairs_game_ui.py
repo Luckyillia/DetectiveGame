@@ -1,3 +1,5 @@
+from asyncio import all_tasks
+
 from nicegui import ui, app
 import random
 import time
@@ -137,54 +139,78 @@ class BestPairsGameUI:
                 self.show_available_rooms()
 
     def show_available_rooms(self):
-        """Показывает список доступных комнат"""
-        # Создаем контейнер для списка комнат
-        self.rooms_list_container = ui.element('div').classes('w-full')
+        """Creates and displays a list of available rooms using consistent styling"""
+        with ui.card().classes('w-full p-6 mt-4 rounded-xl shadow-lg bg-gray-100 dark:bg-gray-800'):
+            ui.label('Доступные комнаты:').classes('text-xl font-bold mb-4 text-indigo-600 dark:text-indigo-400')
+            rooms_list_container = ui.element('div').classes('w-full')
 
-        with self.rooms_list_container:
-            rooms_list = self.room_service.get_rooms_list()
+            # Function to update the rooms list
+            def update_rooms_list():
+                rooms_list_container.clear()
+                with rooms_list_container:
+                    available_rooms = self.room_service.get_rooms_list()
 
-            if rooms_list:
-                ui.label('Доступные комнаты:').classes('text-lg font-bold mb-2')
+                    if available_rooms:
+                        # Create rows for the table
+                        rows = []
+                        for i, room in enumerate(available_rooms):
+                            rows.append({
+                                'id': room['room_id'],
+                                'room_id': room['room_id'],
+                                'host_name': room['host_name'],
+                                'player_count': room['player_count'],
+                                'created_at': datetime.fromtimestamp(room['created_at']).strftime('%H:%M:%S')
+                            })
 
-                with ui.column().classes('w-full gap-2'):
-                    for room in rooms_list:
-                        with ui.card().classes('w-full p-3 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700').on(
-                                'click', lambda r=room: self.join_room(r['room_id'])):
-                            with ui.row().classes('w-full justify-between items-center'):
-                                ui.label(f"Комната {room['room_id']}").classes('font-bold')
-                                ui.label(f"Хост: {room['host_name']}").classes('text-sm')
-                                ui.label(f"Игроков: {room['player_count']}").classes('text-sm')
-            else:
-                self.components.create_status_indicator('Нет доступных комнат', 'info')
+                        # Define columns in the same style as player table
+                        columns = [
+                            {'name': 'room_id', 'label': 'ID комнаты', 'field': 'room_id', 'align': 'center'},
+                            {'name': 'host_name', 'label': 'Создатель', 'field': 'host_name', 'align': 'center'},
+                            {'name': 'player_count', 'label': 'Игроков', 'field': 'player_count', 'align': 'center'},
+                            {'name': 'created_at', 'label': 'Создана', 'field': 'created_at', 'align': 'center'},
+                            {'name': 'action', 'label': 'Действие', 'field': 'action', 'align': 'center'},
+                        ]
 
-        # Запускаем обновление списка комнат
-        self._cancel_timers()
-        self.rooms_update_timer = ui.timer(3.0, lambda: self.update_rooms_list())
+                        # Create the table with unified styling
+                        table = ui.table(
+                            columns=columns,
+                            rows=rows,
+                            row_key='id',
+                            column_defaults={'align': 'center', 'headerClasses': 'uppercase text-primary'}
+                        ).classes('w-full')
 
-    def update_rooms_list(self):
-        """Обновляет список доступных комнат"""
-        # Проверяем, что мы на главном экране и есть контейнер для списка комнат
-        if self.game_container and not self.current_room_id and hasattr(self, 'rooms_list_container'):
-            rooms_list = self.room_service.get_rooms_list()
+                        # Add custom body slot for action buttons
+                        table.add_slot('body', '''
+                            <q-tr :props="props">
+                                <q-td v-for="col in props.cols" :key="col.name" :props="props" class="text-center">
+                                    <template v-if="col.name === 'action'">
+                                        <div class="flex justify-center">
+                                            <q-btn color="primary" dense icon="login" size="md"
+                                                   @click="() => $parent.$emit('join', props.row.room_id)">
+                                                Присоединиться
+                                            </q-btn>
+                                        </div>
+                                    </template>
+                                    <template v-else>
+                                        <span>{{ col.value }}</span>
+                                    </template>
+                                </q-td>
+                            </q-tr>
+                        ''')
 
-            # Обновляем только контейнер со списком комнат
-            self.rooms_list_container.clear()
-            with self.rooms_list_container:
-                if rooms_list:
-                    ui.label('Доступные комнаты:').classes('text-lg font-bold mb-2')
+                        # Add handler for join event
+                        table.on('join', lambda e: self.join_room(e.args))
+                    else:
+                        with ui.card().classes('w-full p-4 bg-gray-200 dark:bg-gray-700 rounded-lg'):
+                            with ui.row().classes('items-center justify-center text-gray-500 dark:text-gray-400'):
+                                ui.icon('info').classes('text-xl mr-2')
+                                ui.label('Нет доступных комнат').classes('text-center')
 
-                    with ui.column().classes('w-full gap-2'):
-                        for room in rooms_list:
-                            with ui.card().classes(
-                                    'w-full p-3 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700').on(
-                                    'click', lambda r=room: self.join_room(r['room_id'])):
-                                with ui.row().classes('w-full justify-between items-center'):
-                                    ui.label(f"Комната {room['room_id']}").classes('font-bold')
-                                    ui.label(f"Хост: {room['host_name']}").classes('text-sm')
-                                    ui.label(f"Игроков: {room['player_count']}").classes('text-sm')
-                else:
-                    self.components.create_status_indicator('Нет доступных комнат', 'info')
+            # Update the rooms list
+            update_rooms_list()
+            self._cancel_timers()
+            # Start timer to update the rooms list (every 5 seconds)
+            self.rooms_update_timer = ui.timer(3.0, update_rooms_list)
 
     def create_room(self):
         """Создает новую комнату"""
@@ -221,7 +247,7 @@ class BestPairsGameUI:
             def cancel_and_restore():
                 dialog.close()
                 # Восстанавливаем таймер обновления списка комнат
-                self.rooms_update_timer = ui.timer(3.0, lambda: self.update_rooms_list())
+                self.show_available_rooms()
 
             with ui.row().classes('w-full justify-end gap-2'):
                 ui.button('Отмена', on_click=cancel_and_restore).classes('bg-gray-300')
@@ -292,7 +318,7 @@ class BestPairsGameUI:
                         ui.button(
                             'Копировать ID комнаты',
                             icon='content_copy',
-                            on_click=lambda: ui.notify('ID скопирован', type='positive')
+                            on_click=lambda: [ui.notify('ID скопирован', type='positive'), ui.clipboard.write(room_data["room_id"])]
                         ).classes('bg-blue-600 hover:bg-blue-700 text-white')
 
                     # Список игроков
@@ -304,18 +330,15 @@ class BestPairsGameUI:
 
                     # Кнопки управления
                     with ui.row().classes('w-full justify-center gap-4 mt-4'):
-                        if is_host and len(room_data["players"]) >= 2:
+                        if is_host:
                             # Хост может начать игру если все готовы
-                            all_ready = self.room_service.all_players_ready(self.current_room_id)
-
                             ui.button(
                                 'Начать игру',
                                 icon='play_arrow',
                                 on_click=self.start_game
                             ).classes(
-                                'bg-green-600 hover:bg-green-700 text-white' if all_ready
-                                else 'bg-gray-400 cursor-not-allowed'
-                            ).props('disabled' if not all_ready else '')
+                                'bg-green-600 hover:bg-green-700 text-white'
+                            )
 
                         # Кнопка готовности для всех игроков
                         is_ready = current_player.get("is_ready", False) if current_player else False
@@ -363,12 +386,17 @@ class BestPairsGameUI:
 
     def toggle_ready(self):
         """Переключает статус готовности игрока"""
+        if not self.current_room_id:
+            return
+
         self._ensure_player_id()
+
         room_data = self.room_service.get_room(self.current_room_id)
         if not room_data:
             return
 
         current_player = next((p for p in room_data["players"] if p["id"] == self.player_id), None)
+
         if not current_player:
             return
 
@@ -377,10 +405,28 @@ class BestPairsGameUI:
 
         if success:
             # Обновляем только таблицу игроков
+            ui.notify(f'Вы {"готовы" if new_ready_status else "не готовы"} к игре!', type='positive')
+            self.show_waiting_room()
             self.last_update_time = time.time()
 
     def start_game(self):
         """Начинает игру (только для хоста)"""
+
+        room_data = self.room_service.get_room(self.current_room_id)
+        if not room_data:
+            ui.notify('Комната не найдена', type='negative')
+            self.current_room_id = None
+            app.storage.user.update({'best_pairs_room_id': None})
+            self.show_main_menu()
+            return
+
+        all_ready = False
+        if (len(room_data['players']) > 1):
+            all_ready = self.room_service.all_players_ready(self.current_room_id)
+
+        if not all_ready:
+            ui.notify('Ошибка не все готовы', type='warning')
+            return
         # Получаем случайные карточки
         cards = self.data_service.get_random_cards(count=5)
 
@@ -777,12 +823,19 @@ class BestPairsGameUI:
         ui.notify('Вы покинули комнату', type='info')
         self.show_main_menu()
 
+
     def _cancel_timers(self):
         """Отменяет все активные таймеры"""
         if self.update_timer:
-            self.update_timer.cancel()
-            self.update_timer = None
+            try:
+                self.update_timer.cancel()
+                self.update_timer = None
+            except:
+                pass
 
         if self.rooms_update_timer:
-            self.rooms_update_timer.cancel()
-            self.rooms_update_timer = None
+            try:
+                self.rooms_update_timer.cancel()
+                self.rooms_update_timer = None
+            except:
+                pass

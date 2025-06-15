@@ -374,7 +374,8 @@ class CodenamesGameUI:
                         ui.button(
                             'Копировать ID комнаты',
                             icon='content_copy',
-                            on_click=lambda: ui.notify('ID скопирован', type='positive')
+                            on_click=lambda: [ui.notify('ID скопирован', type='positive'),
+                                              ui.clipboard.write(room_data["room_id"])]
                         ).classes('bg-blue-600 hover:bg-blue-700 text-white')
 
                     # Показываем статистику команд
