@@ -64,16 +64,17 @@ class MiniGamesUI:
                         ui.label('Командная игра на угадывание слов по подсказкам капитанов!').classes(
                             'text-sm')
 
-                    # Карточка игры "Лучшие Пары"
+                    # Карточка игры "Лучшая пара"
                     with ui.card().classes(
                             'p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors').on(
                         'click',
                         self.show_best_pairs_game):
-                        ui.image('https://i.imgur.com/wZSvkKR.png').classes(
+                        ui.image('https://i.imgur.com/UjJEayB.png').classes(
                             'w-full h-50 object-cover rounded-lg mb-2')
                         ui.label('Лучшие Пары (Best Pairs)').classes('text-xl font-bold mb-1')
                         ui.label('Угадай, как ведущий сочетал прилагательные с существительными!').classes(
                             'text-sm')
+
 
     def show_chameleon_game(self):
         """Показывает интерфейс игры "Хамелеон" """

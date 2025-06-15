@@ -32,6 +32,12 @@ class BestPairsGameUI:
         # Для хранения выбранных пар
         self.selected_pairings = {}
 
+        # Контейнеры для обновляемых элементов
+        self.players_table_container = None
+        self.rooms_list_container = None
+        self.guessing_status_container = None
+        self.last_round = None
+
     def _ensure_player_id(self):
         """Гарантирует, что у нас есть правильный ID игрока"""
         if not self.player_id:
@@ -90,9 +96,10 @@ class BestPairsGameUI:
                     'psychology'
                 )
 
-                with ui.expansion('Правила игры', icon='help_outline').classes(
-                        'w-full mb-4 bg-purple-50 dark:bg-purple-900 rounded-lg'):
-                    ui.markdown("""
+                # Правила игры в отдельной карточке
+                with ui.card().classes('w-full p-4 mb-4 bg-purple-50 dark:bg-purple-900 rounded-lg'):
+                    with ui.expansion('Правила игры', icon='help_outline').classes('w-full'):
+                        ui.markdown("""
                     ### Правила игры "Лучшие Пары":
 
                     1. **Участники**: 2-8 игроков, каждый по очереди становится ведущим
@@ -114,7 +121,7 @@ class BestPairsGameUI:
                     3. **Подсчет очков**:
                        - За каждое совпадение: 2 очка
                        - Бонус ведущему: +1 очко за каждого игрока, угадавшего ≥3 пары
-                    """).classes('p-3')
+                    """)
 
                 # Кнопки действий
                 with ui.row().classes('w-full justify-center gap-4 mb-4'):
@@ -131,22 +138,25 @@ class BestPairsGameUI:
 
     def show_available_rooms(self):
         """Показывает список доступных комнат"""
-        rooms_list = self.room_service.get_rooms_list()
+        # Создаем контейнер для списка комнат
+        self.rooms_list_container = ui.element('div').classes('w-full')
 
-        if rooms_list:
-            ui.label('Доступные комнаты:').classes('text-lg font-bold mb-2')
+        with self.rooms_list_container:
+            rooms_list = self.room_service.get_rooms_list()
 
-            with ui.column().classes('w-full gap-2'):
-                for room in rooms_list:
-                    with ui.card().classes('w-full p-3 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700').on(
-                            'click', lambda r=room: self.join_room(r['room_id'])):
-                        with ui.row().classes('w-full justify-between items-center'):
-                            ui.label(f"Комната {room['room_id']}").classes('font-bold')
-                            ui.label(f"Хост: {room['host_name']}").classes('text-sm')
-                            ui.label(f"Игроков: {room['player_count']}").classes('text-sm')
+            if rooms_list:
+                ui.label('Доступные комнаты:').classes('text-lg font-bold mb-2')
 
-        else:
-            self.components.create_status_indicator('Нет доступных комнат', 'info')
+                with ui.column().classes('w-full gap-2'):
+                    for room in rooms_list:
+                        with ui.card().classes('w-full p-3 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700').on(
+                                'click', lambda r=room: self.join_room(r['room_id'])):
+                            with ui.row().classes('w-full justify-between items-center'):
+                                ui.label(f"Комната {room['room_id']}").classes('font-bold')
+                                ui.label(f"Хост: {room['host_name']}").classes('text-sm')
+                                ui.label(f"Игроков: {room['player_count']}").classes('text-sm')
+            else:
+                self.components.create_status_indicator('Нет доступных комнат', 'info')
 
         # Запускаем обновление списка комнат
         self._cancel_timers()
@@ -154,11 +164,33 @@ class BestPairsGameUI:
 
     def update_rooms_list(self):
         """Обновляет список доступных комнат"""
-        if self.game_container and not self.current_room_id:
-            self.show_main_menu()
+        # Проверяем, что мы на главном экране и есть контейнер для списка комнат
+        if self.game_container and not self.current_room_id and hasattr(self, 'rooms_list_container'):
+            rooms_list = self.room_service.get_rooms_list()
+
+            # Обновляем только контейнер со списком комнат
+            self.rooms_list_container.clear()
+            with self.rooms_list_container:
+                if rooms_list:
+                    ui.label('Доступные комнаты:').classes('text-lg font-bold mb-2')
+
+                    with ui.column().classes('w-full gap-2'):
+                        for room in rooms_list:
+                            with ui.card().classes(
+                                    'w-full p-3 cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-700').on(
+                                    'click', lambda r=room: self.join_room(r['room_id'])):
+                                with ui.row().classes('w-full justify-between items-center'):
+                                    ui.label(f"Комната {room['room_id']}").classes('font-bold')
+                                    ui.label(f"Хост: {room['host_name']}").classes('text-sm')
+                                    ui.label(f"Игроков: {room['player_count']}").classes('text-sm')
+                else:
+                    self.components.create_status_indicator('Нет доступных комнат', 'info')
 
     def create_room(self):
         """Создает новую комнату"""
+        # Отменяем таймеры перед созданием комнаты
+        self._cancel_timers()
+
         self._ensure_player_id()
         room_id = self.room_service.create_room(self.player_id, self.player_name)
 
@@ -166,23 +198,34 @@ class BestPairsGameUI:
             self.current_room_id = room_id
             app.storage.user.update({'best_pairs_room_id': room_id})
             ui.notify(f'Комната {room_id} создана!', type='positive')
-            self.show_waiting_room()
+            # Добавляем небольшую задержку перед показом комнаты ожидания
+            ui.timer(0.1, lambda: self.show_waiting_room(), once=True)
         else:
             ui.notify('Ошибка создания комнаты', type='negative')
 
     def show_join_dialog(self):
         """Показывает диалог для ввода ID комнаты"""
+        # Отменяем таймеры на время диалога
+        self._cancel_timers()
+
         dialog = ui.dialog()
 
         with dialog, ui.card().classes('p-4'):
             ui.label('Введите ID комнаты').classes('text-lg font-bold mb-2')
             room_input = ui.input('ID комнаты', placeholder='pairs_1234').classes('w-full mb-4')
 
+            def join_and_close():
+                if self.join_room(room_input.value):
+                    dialog.close()
+
+            def cancel_and_restore():
+                dialog.close()
+                # Восстанавливаем таймер обновления списка комнат
+                self.rooms_update_timer = ui.timer(3.0, lambda: self.update_rooms_list())
+
             with ui.row().classes('w-full justify-end gap-2'):
-                ui.button('Отмена', on_click=dialog.close).classes('bg-gray-300')
-                ui.button('Присоединиться',
-                          on_click=lambda: self.join_room(room_input.value) or dialog.close()
-                          ).classes('bg-purple-600 text-white')
+                ui.button('Отмена', on_click=cancel_and_restore).classes('bg-gray-300')
+                ui.button('Присоединиться', on_click=join_and_close).classes('bg-purple-600 text-white')
 
         dialog.open()
 
@@ -254,7 +297,10 @@ class BestPairsGameUI:
 
                     # Список игроков
                     ui.label('Игроки в комнате:').classes('text-lg font-bold mb-2')
-                    self.components.create_player_table(room_data["players"], self.player_id, is_waiting=True)
+                    # Создаем контейнер для таблицы игроков, который можно обновлять отдельно
+                    self.players_table_container = ui.element('div').classes('w-full')
+                    with self.players_table_container:
+                        self.components.create_player_table(room_data["players"], self.player_id, is_waiting=True)
 
                     # Кнопки управления
                     with ui.row().classes('w-full justify-center gap-4 mt-4'):
@@ -305,10 +351,15 @@ class BestPairsGameUI:
             self.show_game_screen()
             return
 
-        # Обновляем только если есть изменения
+        # НЕ перерисовываем весь интерфейс, только обновляем таблицу игроков
         if room_data.get("last_activity", 0) > self.last_update_time:
             self.last_update_time = room_data.get("last_activity", 0)
-            self.show_waiting_room()
+            # Обновляем только таблицу игроков, если есть контейнер
+            if hasattr(self, 'players_table_container') and self.players_table_container:
+                self.players_table_container.clear()
+                with self.players_table_container:
+                    self._ensure_player_id()
+                    self.components.create_player_table(room_data["players"], self.player_id, is_waiting=True)
 
     def toggle_ready(self):
         """Переключает статус готовности игрока"""
@@ -322,7 +373,11 @@ class BestPairsGameUI:
             return
 
         new_ready_status = not current_player.get("is_ready", False)
-        self.room_service.set_player_ready(self.current_room_id, self.player_id, new_ready_status)
+        success = self.room_service.set_player_ready(self.current_room_id, self.player_id, new_ready_status)
+
+        if success:
+            # Обновляем только таблицу игроков
+            self.last_update_time = time.time()
 
     def start_game(self):
         """Начинает игру (только для хоста)"""
@@ -365,6 +420,7 @@ class BestPairsGameUI:
 
         # Запускаем таймер обновления
         self._cancel_timers()
+        self.last_round = room_data["game_data"]["round"]  # Сохраняем текущий раунд
         self.update_timer = ui.timer(1.0, lambda: self.update_game_screen())
 
         # Получаем данные текущего игрока
@@ -493,7 +549,10 @@ class BestPairsGameUI:
         players_count = len(room_data["players"]) - 1  # Минус ведущий
         guesses_count = len(room_data["game_data"]["player_guesses"])
 
-        ui.label(f'Ответили: {guesses_count}/{players_count}').classes('text-lg text-center mt-4')
+        # Создаем контейнер для обновляемого статуса
+        self.guessing_status_container = ui.element('div').classes('w-full mt-4')
+        with self.guessing_status_container:
+            ui.label(f'Ответили: {guesses_count}/{players_count}').classes('text-lg text-center')
 
         # Показываем, как ведущий разложил пары
         ui.label('Ваш расклад:').classes('text-lg font-bold mb-2 mt-4')
@@ -686,10 +745,25 @@ class BestPairsGameUI:
             self.show_waiting_room()
             return
 
-        # Обновляем только если есть изменения
-        if room_data.get("last_activity", 0) > self.last_update_time:
-            self.last_update_time = room_data.get("last_activity", 0)
+        # Проверяем изменение раунда или других важных данных
+        current_round = room_data["game_data"]["round"]
+        if hasattr(self, 'last_round') and self.last_round != current_round:
+            # Раунд изменился - нужно перерисовать интерфейс
+            self.last_round = current_round
             self.show_game_screen()
+        elif room_data.get("last_activity", 0) > self.last_update_time:
+            # Есть обновления, но раунд тот же - обновляем только необходимые части
+            self.last_update_time = room_data.get("last_activity", 0)
+
+            # В зависимости от раунда обновляем разные элементы
+            if current_round == 2 and hasattr(self, 'guessing_status_container'):
+                # Обновляем статус угадывания
+                players_count = len(room_data["players"]) - 1
+                guesses_count = len(room_data["game_data"]["player_guesses"])
+
+                self.guessing_status_container.clear()
+                with self.guessing_status_container:
+                    ui.label(f'Ответили: {guesses_count}/{players_count}').classes('text-lg text-center')
 
     def leave_room(self):
         """Покидает текущую комнату"""
