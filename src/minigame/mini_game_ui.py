@@ -3,6 +3,7 @@ from nicegui import ui, app
 from src.minigame.chameleon.chameleon_game_ui import ChameleonGameUI
 from src.minigame.codenames.codenames_game_ui import CodenamesGameUI
 from src.minigame.spy.spy_game_ui import SpyGameUI
+from src.minigame.best_pairs.best_pairs_game_ui import BestPairsGameUI
 from src.services.log.log_services import LogService
 
 
@@ -16,6 +17,7 @@ class MiniGamesUI:
         self.chameleon_game_ui = ChameleonGameUI()
         self.spy_game_ui = SpyGameUI()
         self.codenames_game_ui = CodenamesGameUI()
+        self.best_pairs_game_ui = BestPairsGameUI()
         self.games_container = None
 
     def create_mini_games_ui(self):
@@ -36,7 +38,8 @@ class MiniGamesUI:
                     with ui.card().classes(
                             'p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors').on('click',
                                                                                                                 self.show_chameleon_game):
-                        ui.image('https://game.city/static/media/theChameleon.419b43690de24a8b2287.png').classes('w-full h-50 object-cover rounded-lg mb-2')
+                        ui.image('https://game.city/static/media/theChameleon.419b43690de24a8b2287.png').classes(
+                            'w-full h-50 object-cover rounded-lg mb-2')
                         ui.label('Хамелеон (Chameleon)').classes('text-xl font-bold mb-1')
                         ui.label('Социальная игра-детектив: найди кто из игроков не знает секретное слово!').classes(
                             'text-sm')
@@ -50,7 +53,7 @@ class MiniGamesUI:
                         ui.label('Социальная игра-детектив: найди шпиона, который не знает локацию!').classes(
                             'text-sm')
 
-                        # Карточка игры "Шпион"
+                    # Карточка игры "Кодовые имена"
                     with ui.card().classes(
                             'p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors').on(
                         'click',
@@ -58,7 +61,18 @@ class MiniGamesUI:
                         ui.image('https://i.imgur.com/rkXBo4O.png').classes(
                             'w-full h-50 object-cover rounded-lg mb-2')
                         ui.label('Кодовые имена (Codenames)').classes('text-xl font-bold mb-1')
-                        ui.label('Социальная игра-детектив: найди шпиона, который не знает локацию!').classes(
+                        ui.label('Командная игра на угадывание слов по подсказкам капитанов!').classes(
+                            'text-sm')
+
+                    # Карточка игры "Лучшие Пары"
+                    with ui.card().classes(
+                            'p-4 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors').on(
+                        'click',
+                        self.show_best_pairs_game):
+                        ui.image('https://i.imgur.com/wZSvkKR.png').classes(
+                            'w-full h-50 object-cover rounded-lg mb-2')
+                        ui.label('Лучшие Пары (Best Pairs)').classes('text-xl font-bold mb-1')
+                        ui.label('Угадай, как ведущий сочетал прилагательные с существительными!').classes(
                             'text-sm')
 
     def show_chameleon_game(self):
@@ -128,7 +142,7 @@ class MiniGamesUI:
                 ui.button('← Назад к списку игр', on_click=self.create_mini_games_ui).classes(
                     'bg-gray-200 dark:bg-gray-700')
 
-            # Логируем выбор игры "Шпион"
+            # Логируем выбор игры "Кодовые имена"
             self.log_service.add_log(
                 level="GAME",
                 action="MINI_GAME_SELECT",
@@ -137,3 +151,31 @@ class MiniGamesUI:
             )
             game_content = ui.element('div').classes('w-full')
             self.codenames_game_ui.show_main_menu(game_content)
+
+    def show_best_pairs_game(self):
+        """Показывает интерфейс игры "Лучшие Пары" """
+        # Очищаем контейнер
+        if self.games_container is None:
+            self.games_container = ui.element('div').classes('w-full')
+        else:
+            self.games_container.clear()
+
+        # Добавляем кнопку возврата
+        with self.games_container:
+            with ui.row().classes('w-full mb-4'):
+                ui.button('← Назад к списку игр', on_click=self.create_mini_games_ui).classes(
+                    'bg-gray-200 dark:bg-gray-700')
+
+            # Логируем выбор игры "Лучшие Пары"
+            self.log_service.add_log(
+                level="GAME",
+                action="MINI_GAME_SELECT",
+                message=f"Игрок выбрал мини-игру 'Лучшие Пары'",
+                user_id=app.storage.user.get('user_id')
+            )
+
+            # Создаем контейнер для интерфейса игры
+            game_content = ui.element('div').classes('w-full')
+
+            # Показываем интерфейс игры "Лучшие Пары", передавая контейнер
+            self.best_pairs_game_ui.show_main_menu(game_content)
