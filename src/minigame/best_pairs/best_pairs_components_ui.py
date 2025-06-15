@@ -75,45 +75,25 @@ class BestPairsComponents:
         ui.table(columns=columns, rows=rows, row_key='index').classes('w-full')
 
     @staticmethod
-    def create_noun_card(noun, index):
-        """Создает карточку существительного"""
-        with ui.card().classes(
-                'p-4 bg-white dark:bg-gray-700 shadow-lg hover:shadow-xl transition-shadow cursor-pointer'):
-            ui.label(f"{index + 1}").classes('text-sm text-gray-500 dark:text-gray-400 mb-1')
-            ui.label(noun).classes('text-lg font-bold text-center text-gray-800 dark:text-gray-200')
-
-    @staticmethod
-    def create_adjective_card(adjective, is_revealed=False):
-        """Создает карточку прилагательного"""
-        with ui.card().classes('p-4 shadow-lg hover:shadow-xl transition-shadow'):
-            if is_revealed:
-                ui.label(adjective).classes('text-lg font-bold text-center text-purple-700 dark:text-purple-300')
-            else:
-                ui.icon('help_outline').classes('text-2xl text-gray-400 mx-auto')
-                ui.label('?').classes('text-lg font-bold text-center text-gray-400')
-
-    @staticmethod
     def create_pairing_display(nouns, adjectives, pairings=None, is_host_view=False):
         """Создает отображение пар существительных и прилагательных"""
-        with ui.grid(columns=2).classes('w-full gap-4 mb-4'):
-            # Левая колонка - существительные
-            with ui.column().classes('w-full'):
-                ui.label('Существительные').classes('text-lg font-bold mb-2 text-center')
-                for idx, noun in enumerate(nouns):
-                    BestPairsComponents.create_noun_card(noun, idx)
+        with ui.column().classes('w-full gap-2'):
+            ui.label('Расклад пар:').classes('text-lg font-bold mb-2')
 
-            # Правая колонка - прилагательные
-            with ui.column().classes('w-full'):
-                ui.label('Прилагательные').classes('text-lg font-bold mb-2 text-center')
-                if is_host_view and pairings:
-                    # Для ведущего показываем расставленные прилагательные
-                    for noun_idx in range(len(nouns)):
-                        adj = pairings.get(noun_idx, '?')
-                        BestPairsComponents.create_adjective_card(adj, is_revealed=True)
-                else:
-                    # Для игроков показываем скрытые карточки
-                    for _ in range(len(adjectives)):
-                        BestPairsComponents.create_adjective_card('?', is_revealed=False)
+            for idx, noun in enumerate(nouns):
+                with ui.row().classes('w-full items-center gap-4 p-2 bg-gray-100 dark:bg-gray-800 rounded'):
+                    # Существительное
+                    ui.label(f"{idx + 1}. {noun}").classes('text-lg font-medium min-w-[150px]')
+
+                    # Стрелка
+                    ui.icon('arrow_forward').classes('text-purple-500')
+
+                    # Прилагательное
+                    if is_host_view and pairings:
+                        adj = pairings.get(idx, '?')
+                        ui.label(adj).classes('text-lg font-bold text-purple-700 dark:text-purple-300')
+                    else:
+                        ui.label('?').classes('text-lg font-bold text-gray-400')
 
     @staticmethod
     def create_round_indicator(current_round):
@@ -160,29 +140,32 @@ class BestPairsComponents:
             ui.label('Результаты раунда').classes(
                 'text-xl font-bold mb-4 text-center text-purple-700 dark:text-purple-300')
 
-            # Показываем правильные пары
-            ui.label('Правильные пары:').classes('font-bold mb-2')
-            with ui.column().classes('w-full mb-4'):
-                for noun, adj in correct_pairings.items():
-                    with ui.row().classes('w-full justify-center mb-1'):
-                        ui.label(f"{noun} — {adj}").classes('text-gray-700 dark:text-gray-300')
+            # Показываем сравнение пар
+            with ui.column().classes('w-full gap-2 mb-4'):
+                for noun, correct_adj in correct_pairings.items():
+                    player_adj = player_guesses.get(noun, '')
+                    is_correct = correct_adj == player_adj
 
-            # Показываем догадки игрока
-            ui.label('Ваши догадки:').classes('font-bold mb-2')
-            correct_count = 0
-            with ui.column().classes('w-full mb-4'):
-                for noun, adj in player_guesses.items():
-                    is_correct = correct_pairings.get(noun) == adj
-                    if is_correct:
-                        correct_count += 1
+                    with ui.row().classes('w-full items-center gap-2 p-2 rounded ' +
+                                          (
+                                          'bg-green-100 dark:bg-green-900' if is_correct else 'bg-red-100 dark:bg-red-900')):
+                        # Иконка результата
+                        icon = "check_circle" if is_correct else "cancel"
+                        color = "text-green-600" if is_correct else "text-red-600"
+                        ui.icon(icon).classes(f'{color} text-xl')
 
-                    icon = "✅" if is_correct else "❌"
-                    color = "text-green-600" if is_correct else "text-red-600"
+                        # Существительное
+                        ui.label(f"{noun}").classes('font-medium min-w-[120px]')
 
-                    with ui.row().classes('w-full justify-center mb-1'):
-                        ui.label(f"{icon} {noun} — {adj}").classes(f'{color} dark:{color}')
+                        # Правильное прилагательное
+                        ui.label(f"→ {correct_adj}").classes('text-green-700 dark:text-green-300 font-bold')
+
+                        # Догадка игрока (если отличается)
+                        if not is_correct and player_adj:
+                            ui.label(f"(ваш ответ: {player_adj})").classes('text-red-600 dark:text-red-400 text-sm')
 
             # Показываем счет
+            correct_count = sum(1 for noun in correct_pairings if correct_pairings[noun] == player_guesses.get(noun))
             ui.label(f'Угадано пар: {correct_count}/5').classes('text-center text-lg font-bold mb-2')
             ui.label(f'Заработано очков: {score}').classes(
                 'text-center text-xl font-bold text-purple-700 dark:text-purple-300')

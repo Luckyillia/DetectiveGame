@@ -1,5 +1,3 @@
-from asyncio import all_tasks
-
 from nicegui import ui, app
 import random
 import time
@@ -105,7 +103,7 @@ class BestPairsGameUI:
                     ### Правила игры "Лучшие Пары":
 
                     1. **Участники**: 2-8 игроков, каждый по очереди становится ведущим
-                    2. **Карточки**: 5 существительных и 5 прилагательных
+                    2. **Карточки**: Система случайно выбирает 5 существительных и 5 прилагательных
 
                     **Процесс раунда:**
                     1. **Ведущий**:
@@ -318,7 +316,7 @@ class BestPairsGameUI:
                         ui.button(
                             'Копировать ID комнаты',
                             icon='content_copy',
-                            on_click=lambda: [ui.notify('ID скопирован', type='positive'), ui.clipboard.write(room_data["room_id"])]
+                            on_click=lambda: ui.notify('ID скопирован', type='positive')
                         ).classes('bg-blue-600 hover:bg-blue-700 text-white')
 
                     # Список игроков
@@ -331,7 +329,6 @@ class BestPairsGameUI:
                     # Кнопки управления
                     with ui.row().classes('w-full justify-center gap-4 mt-4'):
                         if is_host:
-                            # Хост может начать игру если все готовы
                             ui.button(
                                 'Начать игру',
                                 icon='play_arrow',
@@ -520,34 +517,33 @@ class BestPairsGameUI:
             with ui.column().classes('w-full'):
                 ui.label('Существительные').classes('text-lg font-bold mb-2 text-center')
                 for idx, noun in enumerate(nouns):
-                    with ui.card().classes('p-4 bg-white dark:bg-gray-700 shadow-lg'):
-                        ui.label(f"{idx + 1}. {noun}").classes('text-lg font-bold text-center')
+                    with ui.card().classes('p-4 shadow-lg'):
+                        with ui.row():
 
-                        # Выпадающий список для выбора прилагательного
-                        current_adj = self.selected_pairings.get(idx, '')
+                            ui.label(f"{idx + 1}. {noun}").classes('text-lg font-bold text-center')
 
-                        adj_select = ui.select(
-                            adjectives,
-                            label='Выберите прилагательное',
-                            value=current_adj,
-                            on_change=lambda e, i=idx: self.update_pairing(i, e.value)
-                        ).classes('w-full mt-2')
+                            # Выпадающий список для выбора прилагательного
+                            current_adj = self.selected_pairings.get(idx, None)
+
+                            adj_select = ui.select(
+                                adjectives,
+                                label='Выберите прилагательное',
+                                value=current_adj,
+                                on_change=lambda e, i=idx: self.update_pairing(i, e.value)
+                            )
 
         # Показываем все доступные прилагательные
         ui.label('Доступные прилагательные:').classes('text-lg font-bold mb-2')
         ui.label(', '.join(adjectives)).classes('text-purple-700 dark:text-purple-300 mb-4')
 
         # Кнопка подтверждения
-        all_paired = len(self.selected_pairings) == 5 and all(
-            adj in adjectives for adj in self.selected_pairings.values())
         ui.button(
             'Подтвердить расклад',
             icon='check',
-            on_click=self.submit_host_pairings
+            on_click=lambda: self.submit_host_pairings(adjectives)
         ).classes(
-            'bg-green-600 hover:bg-green-700 text-white' if all_paired
-            else 'bg-gray-400 cursor-not-allowed'
-        ).props('disabled' if not all_paired else '')
+            'bg-green-600 hover:bg-green-700 text-white'
+        )
 
     def update_pairing(self, noun_idx, adjective):
         """Обновляет выбранную пару"""
@@ -556,8 +552,14 @@ class BestPairsGameUI:
         elif noun_idx in self.selected_pairings:
             del self.selected_pairings[noun_idx]
 
-    def submit_host_pairings(self):
+    def submit_host_pairings(self, adjectives):
         """Отправляет выбранные пары"""
+        all_paired = len(self.selected_pairings) == 5 and all(
+            adj in adjectives for adj in self.selected_pairings.values())
+        if not all_paired:
+            ui.notify('Не все пары выбраны!', type='warning')
+            return
+
         self._ensure_player_id()
         success = self.room_service.set_host_pairings(
             self.current_room_id,
@@ -583,9 +585,10 @@ class BestPairsGameUI:
         nouns = room_data["game_data"]["nouns"]
         ui.label('Существительные в этом раунде:').classes('text-lg font-bold mb-2 mt-4')
 
-        with ui.row().classes('w-full gap-2 flex-wrap'):
+        with ui.column().classes('w-full gap-2'):
             for idx, noun in enumerate(nouns):
-                ui.chip(f"{idx + 1}. {noun}", icon='label').classes('text-lg')
+                with ui.row().classes('w-full items-center p-3 bg-gray-100 dark:bg-gray-800 rounded'):
+                    ui.label(f"{idx + 1}. {noun}").classes('text-lg font-medium')
 
     def show_host_waiting_interface(self, room_data):
         """Интерфейс ожидания для ведущего пока игроки угадывают"""
@@ -607,11 +610,13 @@ class BestPairsGameUI:
         adjectives = room_data["game_data"]["adjectives"]
         pairings = room_data["game_data"]["host_pairings"]
 
-        with ui.column().classes('w-full'):
-            for noun_idx, adj in pairings.items():
-                noun = nouns[int(noun_idx)]
-                with ui.row().classes('w-full justify-center mb-1'):
-                    ui.label(f"{noun} — {adj}").classes('text-purple-700 dark:text-purple-300')
+        with ui.column().classes('w-full gap-2'):
+            for noun_idx_str, adj in pairings.items():
+                noun = nouns[int(noun_idx_str)]
+                with ui.row().classes('w-full items-center gap-4 p-2 bg-purple-100 dark:bg-purple-900 rounded'):
+                    ui.label(f"{int(noun_idx_str) + 1}. {noun}").classes('text-lg font-medium min-w-[150px]')
+                    ui.icon('arrow_forward').classes('text-purple-500')
+                    ui.label(adj).classes('text-lg font-bold text-purple-700 dark:text-purple-300')
 
     def show_player_guessing_interface(self, room_data):
         """Интерфейс для игроков - угадывание пар"""
@@ -640,37 +645,42 @@ class BestPairsGameUI:
             with ui.column().classes('w-full'):
                 ui.label('Существительные').classes('text-lg font-bold mb-2 text-center')
                 for idx, noun in enumerate(nouns):
-                    with ui.card().classes('p-4 bg-white dark:bg-gray-700 shadow-lg'):
-                        ui.label(f"{idx + 1}. {noun}").classes('text-lg font-bold text-center')
+                    with ui.card().classes('p-4 shadow-lg'):
+                        with ui.row():
+                            ui.label(f"{idx + 1}. {noun}").classes('text-lg font-bold text-center')
 
-                        # Выпадающий список для выбора прилагательного
-                        current_adj = self.selected_pairings.get(idx, '')
+                            # Выпадающий список для выбора прилагательного
+                            current_adj = self.selected_pairings.get(idx, None)
 
-                        adj_select = ui.select(
-                            adjectives,
-                            label='Выберите прилагательное',
-                            value=current_adj,
-                            on_change=lambda e, i=idx: self.update_pairing(i, e.value)
-                        ).classes('w-full mt-2')
+                            adj_select = ui.select(
+                                adjectives,
+                                label='Выберите прилагательное',
+                                value=current_adj,
+                                on_change=lambda e, i=idx: self.update_pairing(i, e.value)
+                            ).classes('w-full mt-2')
 
         # Показываем все доступные прилагательные
         ui.label('Доступные прилагательные:').classes('text-lg font-bold mb-2')
         ui.label(', '.join(adjectives)).classes('text-purple-700 dark:text-purple-300 mb-4')
 
-        # Кнопка отправки
-        all_guessed = len(self.selected_pairings) == 5 and all(
-            adj in adjectives for adj in self.selected_pairings.values())
+
         ui.button(
             'Отправить догадки',
             icon='send',
-            on_click=self.submit_player_guesses
+            on_click=lambda: self.submit_player_guesses(adjectives)
         ).classes(
-            'bg-green-600 hover:bg-green-700 text-white' if all_guessed
-            else 'bg-gray-400 cursor-not-allowed'
-        ).props('disabled' if not all_guessed else '')
+            'bg-green-600 hover:bg-green-700 text-white'
+        )
 
-    def submit_player_guesses(self):
+    def submit_player_guesses(self, adjectives):
         """Отправляет догадки игрока"""
+        all_guessed = len(self.selected_pairings) == 5 and all(
+            adj in adjectives for adj in self.selected_pairings.values())
+
+        if not all_guessed:
+            ui.notify('Не все пары выбраны!', type='warning')
+            return
+
         self._ensure_player_id()
         success = self.room_service.submit_player_guess(
             self.current_room_id,
@@ -694,8 +704,9 @@ class BestPairsGameUI:
         self.room_service.apply_round_scores(self.current_room_id)
 
         # Показываем правильные пары
-        ui.label('Правильные пары:').classes('text-xl font-bold mb-4')
+        ui.label('Результаты раунда').classes('text-xl font-bold mb-4 text-center')
 
+        # Создаем словарь правильных пар с именами существительных
         correct_pairings = {}
         for noun_idx_str, adj in host_pairings.items():
             noun = nouns[int(noun_idx_str)]
@@ -704,15 +715,16 @@ class BestPairsGameUI:
         # Показываем результаты для текущего игрока
         self._ensure_player_id()
         if self.player_id in player_guesses:
+            # Создаем словарь догадок игрока с именами существительных
             my_guesses = {}
-            for noun_idx, adj in player_guesses[self.player_id].items():
-                noun = nouns[int(noun_idx)]
+            for noun_idx_str, adj in player_guesses[self.player_id].items():
+                noun = nouns[int(noun_idx_str)]
                 my_guesses[noun] = adj
 
             # Подсчитываем очки
             correct_count = 0
-            for noun_idx, adj in player_guesses[self.player_id].items():
-                if host_pairings.get(str(noun_idx)) == adj:
+            for noun_idx_str, adj in player_guesses[self.player_id].items():
+                if host_pairings.get(noun_idx_str) == adj:
                     correct_count += 1
 
             score = correct_count * 2
@@ -730,9 +742,20 @@ class BestPairsGameUI:
                 if correct_count >= 3:
                     host_bonus += 1
 
-            ui.label(f'Вы заработали {host_bonus} бонусных очков как ведущий!').classes(
-                'text-xl font-bold text-purple-700 dark:text-purple-300 text-center'
-            )
+            with ui.card().classes('w-full p-6 bg-purple-100 dark:bg-purple-900 rounded-lg'):
+                ui.label(f'Вы заработали {host_bonus} бонусных очков как ведущий!').classes(
+                    'text-xl font-bold text-purple-700 dark:text-purple-300 text-center'
+                )
+
+                # Показываем свой расклад
+                ui.label('Ваш расклад был:').classes('text-lg font-bold mb-2 mt-4')
+                with ui.column().classes('w-full gap-2'):
+                    for noun_idx_str, adj in host_pairings.items():
+                        noun = nouns[int(noun_idx_str)]
+                        with ui.row().classes('w-full items-center gap-4 p-2 bg-white dark:bg-gray-800 rounded'):
+                            ui.label(f"{int(noun_idx_str) + 1}. {noun}").classes('text-lg font-medium min-w-[150px]')
+                            ui.icon('arrow_forward').classes('text-purple-500')
+                            ui.label(adj).classes('text-lg font-bold text-purple-700 dark:text-purple-300')
 
     def show_round_end_interface(self, room_data):
         """Показывает интерфейс конца раунда"""
@@ -822,7 +845,6 @@ class BestPairsGameUI:
         self._cancel_timers()
         ui.notify('Вы покинули комнату', type='info')
         self.show_main_menu()
-
 
     def _cancel_timers(self):
         """Отменяет все активные таймеры"""
