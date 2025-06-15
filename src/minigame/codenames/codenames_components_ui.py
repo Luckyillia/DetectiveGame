@@ -64,23 +64,45 @@ class CodenamesComponents:
             team_id = player.get('team')
             role = player.get('role')
 
-            # Определяем информацию о команде
+            # Определяем информацию о команде с цветом
             team_info = "Не в команде"
+            team_color_class = "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
+
             if team_id and team_id in teams:
                 team = teams[team_id]
                 team_info = team["name"]
+                # Получаем цветовой класс для команды
+                team_color_class = {
+                    '1': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+                    '2': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
+                    '3': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+                    '4': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
+                    '5': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
+                }.get(team_id, team_color_class)
 
-            # Определяем роль
+            # Определяем роль с улучшенным отображением
             role_info = "Не назначена"
-            if role == "captain":
-                role_info = "Капитан"
-            elif role == "member":
-                role_info = "Участник"
+            role_color_class = "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200"
 
-            # Время последнего действия
-            last_action_time = player.get('last_action', player.get('joined_at', 0))
-            last_action_str = datetime.fromtimestamp(last_action_time).strftime(
-                '%H:%M:%S') if last_action_time else '—'
+            if role == "captain":
+                role_info = "👑 Капитан"
+                role_color_class = "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+            elif role == "member":
+                role_info = "👤 Участник"
+                role_color_class = "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+
+            # Время последнего действия - исправляем логику
+            last_action_time = player.get('last_action', 0)
+            if last_action_time == 0:
+                last_action_time = player.get('joined_at', 0)
+
+            if last_action_time > 0:
+                try:
+                    last_action_str = datetime.fromtimestamp(last_action_time).strftime('%H:%M:%S')
+                except (ValueError, OSError):
+                    last_action_str = '—'
+            else:
+                last_action_str = '—'
 
             row = {
                 'id': player_id,
@@ -90,7 +112,9 @@ class CodenamesComponents:
                 'role': role_info,
                 'last_action': last_action_str,
                 'team_id': team_id,
-                'player_role': role
+                'player_role': role,
+                'team_color_class': team_color_class,
+                'role_color_class': role_color_class
             }
 
             rows.append(row)
@@ -103,17 +127,27 @@ class CodenamesComponents:
             column_defaults={'align': 'center', 'headerClasses': 'uppercase text-primary'}
         ).classes('w-full')
 
-        # Добавляем пользовательский слот для стилизации команд
+        # Добавляем пользовательский слот для стилизации команд и ролей
         body_template = '''
         <q-tr :props="props">
             <q-td v-for="col in props.cols" :key="col.name" :props="props" class="text-center">
                 <template v-if="col.name === 'team' && props.row.team_id">
-                    <div :class="getTeamColorClass(props.row.team_id)" class="px-2 py-1 rounded-full font-medium inline-block">
+                    <div :class="props.row.team_color_class" class="px-2 py-1 rounded-full font-medium inline-block">
                         {{ col.value }}
                     </div>
                 </template>
                 <template v-else-if="col.name === 'role' && props.row.player_role">
-                    <div :class="getRoleColorClass(props.row.player_role)" class="px-2 py-1 rounded-full font-medium inline-block">
+                    <div :class="props.row.role_color_class" class="px-2 py-1 rounded-full font-medium inline-block">
+                        {{ col.value }}
+                    </div>
+                </template>
+                <template v-else-if="col.name === 'team' && !props.row.team_id">
+                    <div class="bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 px-2 py-1 rounded-full font-medium inline-block italic">
+                        {{ col.value }}
+                    </div>
+                </template>
+                <template v-else-if="col.name === 'role' && !props.row.player_role">
+                    <div class="bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 px-2 py-1 rounded-full font-medium inline-block italic">
                         {{ col.value }}
                     </div>
                 </template>
@@ -125,30 +159,7 @@ class CodenamesComponents:
         '''
 
         table.add_slot('body', body_template)
-
-        # Добавляем методы для получения цветов
-        table._props['methods'] = {
-            'getTeamColorClass': '''(teamId) => {
-                const colors = {
-                    '1': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-                    '2': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-                    '3': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-                    '4': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-                    '5': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
-                };
-                return colors[teamId] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
-            }''',
-            'getRoleColorClass': '''(role) => {
-                if (role === 'captain') {
-                    return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
-                }
-                return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
-            }'''
-        }
-
         return table
-
-    # Исправления для codenames_components_ui.py
 
     @staticmethod
     def create_team_selection(teams, max_teams, join_team_handler, current_user_id):
@@ -470,24 +481,71 @@ class CodenamesComponents:
                             f'width: {progress}%')
 
     @staticmethod
-    def create_game_result_card(winner, teams):
-        """Создает карточку с результатами игры"""
+    def create_game_result_card(winner, teams, current_team_data=None):
+        """Создает карточку с результатами игры - ИСПРАВЛЕНО"""
         with ui.card().classes('w-full p-6 mb-4 rounded-lg'):
             if winner == "assassin":
                 ui.label('Игра окончена!').classes(
                     'text-2xl font-bold mb-2 text-center text-red-600 dark:text-red-400')
                 ui.label('Команда наткнулась на убийцу! 💀').classes(
                     'text-xl text-center text-red-700 dark:text-red-300 mb-2')
-                ui.label('Все остальные команды побеждают!').classes(
-                    'text-lg text-center text-green-600 dark:text-green-400')
+
+                # ИСПРАВЛЕНИЕ: Показываем какая именно команда проиграла
+                losing_team_id = None
+                if current_team_data:
+                    # Приоритет: специально сохраненная losing_team, затем current_team
+                    losing_team_id = current_team_data.get('losing_team') or current_team_data.get('current_team')
+
+                if losing_team_id:
+                    losing_team_id = str(losing_team_id)
+                    losing_team = teams.get(losing_team_id)
+                    if losing_team:
+                        losing_team_name = losing_team.get('name', f'Команда {losing_team_id}')
+                        ui.label(f'Команда "{losing_team_name}" проиграла, открыв карту убийцы!').classes(
+                            'text-lg text-center text-red-600 dark:text-red-400 mb-2')
+
+                # Показываем победившие команды
+                winning_teams = []
+                for tid, team in teams.items():
+                    if tid != losing_team_id:
+                        team_name = team.get('name', f'Команда {tid}')
+                        winning_teams.append(team_name)
+
+                if winning_teams:
+                    if len(winning_teams) == 1:
+                        ui.label(f'Команда "{winning_teams[0]}" побеждает!').classes(
+                            'text-lg text-center text-green-600 dark:text-green-400')
+                    else:
+                        teams_list = '", "'.join(winning_teams[:-1]) + f'" и "{winning_teams[-1]}'
+                        ui.label(f'Команды "{teams_list}" побеждают!').classes(
+                            'text-lg text-center text-green-600 dark:text-green-400')
+                else:
+                    ui.label('Все остальные команды побеждают!').classes(
+                        'text-lg text-center text-green-600 dark:text-green-400')
             else:
                 winning_team = teams.get(str(winner))
                 if winning_team:
                     team_name = winning_team.get('name', f'Команда {winner}')
                     ui.label('Победа!').classes(
                         'text-2xl font-bold mb-2 text-center text-green-600 dark:text-green-400')
-                    ui.label(f'{team_name} открыла все свои карты! 🎉').classes(
+                    ui.label(f'Команда "{team_name}" открыла все свои карты! 🎉').classes(
                         'text-xl text-center text-green-700 dark:text-green-300 mb-2')
+
+                    # Показываем проигравшие команды
+                    losing_teams = []
+                    for tid, team in teams.items():
+                        if tid != str(winner):
+                            team_name = team.get('name', f'Команда {tid}')
+                            losing_teams.append(team_name)
+
+                    if losing_teams:
+                        if len(losing_teams) == 1:
+                            ui.label(f'Команда "{losing_teams[0]}" проиграла.').classes(
+                                'text-md text-center text-gray-600 dark:text-gray-400')
+                        else:
+                            teams_list = '", "'.join(losing_teams[:-1]) + f'" и "{losing_teams[-1]}'
+                            ui.label(f'Команды "{teams_list}" проиграли.').classes(
+                                'text-md text-center text-gray-600 dark:text-gray-400')
 
     @staticmethod
     def create_round_indicator(status, current_team_name=None):

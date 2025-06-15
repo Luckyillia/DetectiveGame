@@ -110,5 +110,31 @@
         "Юбка"
       ]
     }
+  },
+  "chameleon_5779": {
+    "room_id": "chameleon_5779",
+    "created_at": 1749802288,
+    "last_activity": 1749802288,
+    "status": "waiting",
+    "host_id": "a2d04f74-6d89-40ab-ac3d-edcf09bf6c42",
+    "players": [
+      {
+        "id": "a2d04f74-6d89-40ab-ac3d-edcf09bf6c42",
+        "name": "Yojson",
+        "is_host": true,
+        "joined_at": 1749802288,
+        "last_action": 1749802288,
+        "is_ready": true
+      }
+    ],
+    "game_data": {
+      "category": null,
+      "word": null,
+      "chameleon_index": -1,
+      "descriptions": [],
+      "votes": {},
+      "round": 0,
+      "current_player_index": 0
+    }
   }
 }

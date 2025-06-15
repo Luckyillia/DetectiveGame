@@ -569,14 +569,19 @@ class CodenamesRoomService:
 
         return success
 
+    # Исправления для codenames_room_service.py - замените метод _process_guess_result
+
     def _process_guess_result(self, room, card, current_team):
-        """Обрабатывает результат угадывания."""
+        """Обрабатывает результат угадывания - ИСПРАВЛЕНО."""
         card_team = card["team"]
 
         if card_team == -1:
             # Попали на убийцу - команда проигрывает
             room["status"] = "finished"
             room["game_data"]["winner"] = "assassin"
+            # ИСПРАВЛЕНИЕ: Сохраняем информацию о проигравшей команде
+            room["game_data"]["losing_team"] = current_team
+            room["game_data"]["game_end_reason"] = "assassin"
             return "assassin"
         elif card_team == current_team:
             # Угадали свою карту - могут продолжать
@@ -584,12 +589,50 @@ class CodenamesRoomService:
             if self._check_team_victory(room, current_team):
                 room["status"] = "finished"
                 room["game_data"]["winner"] = current_team
+                room["game_data"]["game_end_reason"] = "victory"
                 return "victory"
             return "correct"
         else:
             # Угадали чужую или нейтральную карту - ход переходит
             self._switch_turn(room)
             return "wrong"
+
+    # Добавьте также этот вспомогательный метод для получения результатов игры
+    def get_game_results(self, room_id):
+        """Получает детальные результаты игры."""
+        room = self.get_room(room_id)
+        if not room or room["status"] != "finished":
+            return None
+
+        game_data = room["game_data"]
+        winner = game_data.get("winner")
+
+        result = {
+            "winner": winner,
+            "game_end_reason": game_data.get("game_end_reason", "unknown"),
+            "teams": room["teams"],
+            "players": room["players"]
+        }
+
+        if winner == "assassin":
+            # Если проиграли из-за убийцы, указываем проигравшую команду
+            losing_team = game_data.get("losing_team")
+            current_team = game_data.get("current_team")  # команда которая ходила
+
+            result["losing_team"] = losing_team or current_team
+            result["winning_teams"] = [
+                team_id for team_id in room["teams"].keys()
+                if team_id != str(result["losing_team"])
+            ]
+        else:
+            # Обычная победа - одна команда выиграла
+            result["winning_teams"] = [str(winner)]
+            result["losing_teams"] = [
+                team_id for team_id in room["teams"].keys()
+                if team_id != str(winner)
+            ]
+
+        return result
 
     @staticmethod
     def _check_team_victory(room, team_id):

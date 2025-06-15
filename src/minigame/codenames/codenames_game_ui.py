@@ -850,6 +850,8 @@ class CodenamesGameUI:
                 action="CODENAMES_SETTINGS_ERROR"
             )
 
+    # Исправления для codenames_game_ui.py - добавьте эти методы/изменения
+
     def show_game_screen(self):
         """Показывает экран игры."""
         if not self.current_room_id:
@@ -930,17 +932,51 @@ class CodenamesGameUI:
                     self.player_id
                 )
 
-            # Проверяем, не завершена ли игра
+            # Проверяем, не завершена ли игра - ИСПРАВЛЕНО
             if room_data["status"] == "finished":
                 winner = room_data["game_data"].get("winner")
-                self.components.create_game_result_card(winner, room_data["teams"])
+                # Передаем дополнительные данные для правильного отображения результатов
+                current_team_data = {
+                    'current_team': room_data["game_data"].get("current_team"),
+                    'losing_team': room_data["game_data"].get("losing_team"),
+                    'game_end_reason': room_data["game_data"].get("game_end_reason")
+                }
+                self.components.create_game_result_card(winner, room_data["teams"], current_team_data)
 
             # Кнопка выхода
             ui.button('Выйти из игры', icon='exit_to_app', on_click=self.leave_game).classes(
                 'w-full bg-red-500 hover:bg-red-600 text-white mt-4')
 
+    def show_game_over(self, winner, teams):
+        """Показывает экран завершения игры - ИСПРАВЛЕНО."""
+        self._cancel_timers()
+        self.game_container.clear()
+
+        # Получаем данные о текущей команде для правильного отображения
+        room_data = self.room_service.get_room(self.current_room_id)
+        current_team_data = None
+        if room_data:
+            current_team_data = {
+                'current_team': room_data["game_data"].get("current_team"),
+                'losing_team': room_data["game_data"].get("losing_team"),
+                'game_end_reason': room_data["game_data"].get("game_end_reason")
+            }
+
+        with self.game_container:
+            with ui.card().classes('w-full p-6 rounded-xl shadow-lg bg-gray-100 dark:bg-gray-800 text-center'):
+                ui.label('Игра завершена!').classes('text-2xl font-bold mb-4 text-blue-600 dark:text-blue-400')
+
+                # Передаем данные о текущей команде для правильного отображения результатов
+                self.components.create_game_result_card(winner, teams, current_team_data)
+
+                with ui.row().classes('w-full justify-center gap-4 mt-6'):
+                    ui.button('Играть снова', icon='replay', on_click=self.reset_game).classes(
+                        'bg-blue-600 hover:bg-blue-700 text-white')
+                    ui.button('Выйти в меню', icon='home', on_click=self.return_to_menu).classes(
+                        'bg-gray-500 hover:bg-gray-600 text-white')
+
     def update_game_screen(self):
-        """Обновляет данные на экране игры."""
+        """Обновляет данные на экране игры - ИСПРАВЛЕНО."""
         if not self.current_room_id:
             self._cancel_timers()
             return
@@ -958,7 +994,26 @@ class CodenamesGameUI:
             self.last_update_time = room_data.get("last_activity", 0)
 
             if room_data["status"] == "finished":
-                self.show_game_over(room_data["game_data"].get("winner"), room_data["teams"])
+                # Получаем победителя и передаем данные о текущей команде
+                winner = room_data["game_data"].get("winner")
+
+                # Логируем завершение игры с подробностями
+                self.log_service.add_log(
+                    level="GAME",
+                    action="CODENAMES_GAME_FINISHED",
+                    message=f"Игра Codenames завершена",
+                    user_id=self.player_id,
+                    metadata={
+                        "room_id": self.current_room_id,
+                        "winner": winner,
+                        "current_team": room_data["game_data"].get("current_team"),
+                        "losing_team": room_data["game_data"].get("losing_team"),
+                        "game_end_reason": room_data["game_data"].get("game_end_reason"),
+                        "teams": list(room_data["teams"].keys())
+                    }
+                )
+
+                self.show_game_over(winner, room_data["teams"])
                 return
 
             self.show_game_screen()
@@ -1012,23 +1067,6 @@ class CodenamesGameUI:
             self.show_game_screen()
         else:
             ui.notify('Ошибка при завершении хода', type='negative')
-
-    def show_game_over(self, winner, teams):
-        """Показывает экран завершения игры."""
-        self._cancel_timers()
-        self.game_container.clear()
-
-        with self.game_container:
-            with ui.card().classes('w-full p-6 rounded-xl shadow-lg bg-gray-100 dark:bg-gray-800 text-center'):
-                ui.label('Игра завершена!').classes('text-2xl font-bold mb-4 text-blue-600 dark:text-blue-400')
-
-                self.components.create_game_result_card(winner, teams)
-
-                with ui.row().classes('w-full justify-center gap-4 mt-6'):
-                    ui.button('Играть снова', icon='replay', on_click=self.reset_game).classes(
-                        'bg-blue-600 hover:bg-blue-700 text-white')
-                    ui.button('Выйти в меню', icon='home', on_click=self.return_to_menu).classes(
-                        'bg-gray-500 hover:bg-gray-600 text-white')
 
     def reset_game(self):
         """Сбрасывает игру для повторной игры."""
