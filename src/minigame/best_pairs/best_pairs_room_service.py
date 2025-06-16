@@ -411,7 +411,7 @@ class BestPairsRoomService:
                     correct_count += 1
 
             # 2 очка за каждое совпадение
-            player_score = correct_count * 2
+            player_score = correct_count
             scores[player_id] = player_score
 
             # Бонус ведущему за каждого игрока, угадавшего >= 3 пар
