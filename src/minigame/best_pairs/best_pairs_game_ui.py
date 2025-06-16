@@ -32,7 +32,7 @@ class BestPairsGameUI:
         # Для хранения выбранных пар
         self.selected_pairings = {}
 
-        # Контейнеры для обновляемых элементов
+        # Контейнеры для обновляемых элементов - инициализируем как None
         self.players_table_container = None
         self.rooms_list_container = None
         self.guessing_status_container = None
@@ -290,6 +290,9 @@ class BestPairsGameUI:
             self.show_main_menu()
             return
 
+        # ОЧИЩАЕМ КОНТЕЙНЕРЫ ПРИ СМЕНЕ ЭКРАНА
+        self._clear_ui_containers()
+
         self.game_container.clear()
 
         # Запускаем таймер обновления
@@ -374,12 +377,20 @@ class BestPairsGameUI:
         # НЕ перерисовываем весь интерфейс, только обновляем таблицу игроков
         if room_data.get("last_activity", 0) > self.last_update_time:
             self.last_update_time = room_data.get("last_activity", 0)
-            # Обновляем только таблицу игроков, если есть контейнер
-            if hasattr(self, 'players_table_container') and self.players_table_container:
-                self.players_table_container.clear()
-                with self.players_table_container:
-                    self._ensure_player_id()
-                    self.components.create_player_table(room_data["players"], self.player_id, is_waiting=True)
+
+            # Обновляем только таблицу игроков, если есть контейнер И он не None
+            if (hasattr(self, 'players_table_container') and
+                    self.players_table_container is not None):  # ← ДОБАВЛЕНА ПРОВЕРКА НА None
+
+                try:
+                    self.players_table_container.clear()
+                    with self.players_table_container:
+                        self._ensure_player_id()
+                        self.components.create_player_table(room_data["players"], self.player_id, is_waiting=True)
+                except Exception as e:
+                    # Если контейнер недоступен, просто игнорируем обновление
+                    # Интерфейс будет обновлен при следующем полном перерисовывании
+                    pass
 
     def toggle_ready(self):
         """Переключает статус готовности игрока"""
@@ -458,6 +469,9 @@ class BestPairsGameUI:
         if room_data["status"] != "playing":
             self.show_waiting_room()
             return
+
+        # ОЧИЩАЕМ КОНТЕЙНЕРЫ ПРИ СМЕНЕ ЭКРАНА
+        self._clear_ui_containers()
 
         self.game_container.clear()
 
@@ -700,7 +714,7 @@ class BestPairsGameUI:
         host_pairings = room_data["game_data"]["host_pairings"]
         player_guesses = room_data["game_data"]["player_guesses"]
 
-        # Сначала применяем очки
+        # Применяем очки
         self.room_service.apply_round_scores(self.current_room_id)
 
         # Показываем правильные пары
@@ -727,7 +741,7 @@ class BestPairsGameUI:
                 if host_pairings.get(noun_idx_str) == adj:
                     correct_count += 1
 
-            score = correct_count * 2
+            score = correct_count
 
             self.components.create_result_card(correct_pairings, my_guesses, score)
 
@@ -752,11 +766,27 @@ class BestPairsGameUI:
                 with ui.column().classes('w-full gap-2'):
                     for noun_idx_str, adj in host_pairings.items():
                         noun = nouns[int(noun_idx_str)]
-                        with ui.row().classes('w-full items-center gap-4 p-2 bg-white dark:bg-gray-800 rounded'):
+                        with ui.row().classes('w-full items-center gap-4 p-2 bg-purple rounded'):
                             ui.label(f"{int(noun_idx_str) + 1}. {noun}").classes('text-lg font-medium min-w-[150px]')
                             ui.icon('arrow_forward').classes('text-purple-500')
                             ui.label(adj).classes('text-lg font-bold text-purple-700 dark:text-purple-300')
 
+        # ДОБАВЛЯЕМ КНОПКУ ДЛЯ ПЕРЕХОДА К ОКОНЧАНИЮ РАУНДА
+        with ui.row().classes('w-full justify-center mt-6'):
+            ui.button(
+                'Продолжить',
+                icon='navigate_next',
+                on_click=self.proceed_to_round_end
+            ).classes('bg-purple-600 hover:bg-purple-700 text-white text-lg px-6 py-3')
+
+    def proceed_to_round_end(self):
+        """Переходит к экрану окончания раунда"""
+        success = self.room_service.end_round(self.current_room_id)
+
+        if success:
+            ui.notify('Переход к результатам!', type='positive')
+        else:
+            ui.notify('Ошибка перехода', type='negative')
     def show_round_end_interface(self, room_data):
         """Показывает интерфейс конца раунда"""
         # Показываем общий счет
@@ -825,14 +855,22 @@ class BestPairsGameUI:
             self.last_update_time = room_data.get("last_activity", 0)
 
             # В зависимости от раунда обновляем разные элементы
-            if current_round == 2 and hasattr(self, 'guessing_status_container'):
-                # Обновляем статус угадывания
-                players_count = len(room_data["players"]) - 1
-                guesses_count = len(room_data["game_data"]["player_guesses"])
+            if (current_round == 2 and
+                    hasattr(self, 'guessing_status_container') and
+                    self.guessing_status_container is not None):  # ← ДОБАВЛЕНА ПРОВЕРКА НА None
 
-                self.guessing_status_container.clear()
-                with self.guessing_status_container:
-                    ui.label(f'Ответили: {guesses_count}/{players_count}').classes('text-lg text-center')
+                try:
+                    # Обновляем статус угадывания
+                    players_count = len(room_data["players"]) - 1
+                    guesses_count = len(room_data["game_data"]["player_guesses"])
+
+                    self.guessing_status_container.clear()
+                    with self.guessing_status_container:
+                        ui.label(f'Ответили: {guesses_count}/{players_count}').classes('text-lg text-center')
+                except Exception as e:
+                    # Если контейнер недоступен, просто игнорируем обновление
+                    # Интерфейс будет обновлен при следующем полном перерисовывании
+                    pass
 
     def leave_room(self):
         """Покидает текущую комнату"""
@@ -861,3 +899,9 @@ class BestPairsGameUI:
                 self.rooms_update_timer = None
             except:
                 pass
+
+    def _clear_ui_containers(self):
+        """Очищает все UI контейнеры"""
+        self.players_table_container = None
+        self.rooms_list_container = None
+        self.guessing_status_container = None

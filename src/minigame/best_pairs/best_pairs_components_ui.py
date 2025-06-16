@@ -136,7 +136,7 @@ class BestPairsComponents:
     @staticmethod
     def create_result_card(correct_pairings, player_guesses, score):
         """Создает карточку с результатами раунда"""
-        with ui.card().classes('w-full p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg'):
+        with ui.card().classes('w-full p-6 rounded-lg shadow-lg'):
             ui.label('Результаты раунда').classes(
                 'text-xl font-bold mb-4 text-center text-purple-700 dark:text-purple-300')
 

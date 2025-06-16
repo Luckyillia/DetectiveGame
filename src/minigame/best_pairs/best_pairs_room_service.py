@@ -285,9 +285,10 @@ class BestPairsRoomService:
         room["game_data"]["adjectives"] = adjectives
         room["game_data"]["host_pairings"] = {}
         room["game_data"]["player_guesses"] = {}
-        room["game_data"]["round"] = 1  # Ведущий раскладывает пары
+        room["game_data"]["round"] = 1
         room["game_data"]["current_round_host"] = current_host["id"]
         room["game_data"]["round_scores"] = {}
+        room["game_data"]["scores_applied"] = False  # ← ДОБАВЛЕНО! Сбрасываем флаг
 
         room["last_activity"] = current_time
 
@@ -392,6 +393,7 @@ class BestPairsRoomService:
 
         return success
 
+    # ИСПРАВЛЕНИЕ 1: В calculate_round_scores()
     def calculate_round_scores(self, room_id):
         """Подсчитывает очки за раунд."""
         room = self.get_room(room_id)
@@ -410,7 +412,7 @@ class BestPairsRoomService:
                 if host_pairings.get(str(noun_idx)) == adj:
                     correct_count += 1
 
-            # 2 очка за каждое совпадение
+            # ИСПРАВЛЕНО: 2 очка за каждое совпадение
             player_score = correct_count
             scores[player_id] = player_score
 
@@ -424,6 +426,7 @@ class BestPairsRoomService:
 
         return scores
 
+    # ИСПРАВЛЕНИЕ 2: В apply_round_scores() - добавляем проверку на повторное применение
     def apply_round_scores(self, room_id):
         """Применяет подсчитанные очки к общему счету."""
         rooms = self.load_rooms()
@@ -431,6 +434,11 @@ class BestPairsRoomService:
             return False
 
         room = rooms[room_id]
+
+        # ДОБАВЛЕНО: Проверяем, не были ли очки уже применены
+        if room["game_data"].get("scores_applied", False):
+            return True  # Очки уже применены, возвращаем успех
+
         scores = self.calculate_round_scores(room_id)
 
         if not scores:
@@ -441,9 +449,9 @@ class BestPairsRoomService:
             if player["id"] in scores:
                 player["score"] += scores[player["id"]]
 
-        # Сохраняем очки раунда
+        # Сохраняем очки раунда и отмечаем, что очки применены
         room["game_data"]["round_scores"] = scores
-        room["game_data"]["round"] = 4  # Конец раунда
+        room["game_data"]["scores_applied"] = True  # ← ДОБАВЛЕНО!
         room["last_activity"] = int(time.time())
 
         success = self.save_rooms(rooms)
@@ -459,6 +467,36 @@ class BestPairsRoomService:
 
         return success
 
+    # Добавляем новую функцию
+    def end_round(self, room_id):
+        """Завершает текущий раунд и переходит к экрану окончания раунда."""
+        rooms = self.load_rooms()
+        if room_id not in rooms:
+            return False
+
+        room = rooms[room_id]
+
+        # Проверяем, что мы в раунде результатов
+        if room["game_data"]["round"] != 3:
+            return False
+
+        room["game_data"]["round"] = 4  # Конец раунда
+        room["last_activity"] = int(time.time())
+
+        success = self.save_rooms(rooms)
+
+        if success:
+            self.log_service.add_log(
+                level="GAME",
+                action="BEST_PAIRS_ROUND_END",
+                message=f"Раунд завершен",
+                user_id=app.storage.user.get('user_id'),
+                metadata={"room_id": room_id}
+            )
+
+        return success
+
+    # В next_round() также нужно сбрасывать флаг
     def next_round(self, room_id):
         """Переходит к следующему раунду."""
         rooms = self.load_rooms()
@@ -489,7 +527,8 @@ class BestPairsRoomService:
             "player_guesses": {},
             "round": 0,
             "current_round_host": room["players"][room["current_host_index"]]["id"],
-            "round_scores": {}
+            "round_scores": {},
+            "scores_applied": False  # ← ДОБАВЛЕНО! Сбрасываем флаг
         }
 
         # Сбрасываем готовность игроков
