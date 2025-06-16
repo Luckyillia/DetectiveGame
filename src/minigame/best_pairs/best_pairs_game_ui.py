@@ -39,6 +39,8 @@ class BestPairsGameUI:
         self.status_container = None
         self.pairs_container = None
         self.button_container = None
+        self.controls_container = None
+        self.current_nouns = None
 
     def _ensure_player_id(self):
         """Гарантирует, что у нас есть правильный ID игрока"""
@@ -848,9 +850,106 @@ class BestPairsGameUI:
 
         if success:
             ui.notify('Догадки отправлены!', type='positive')
+            self.show_readonly_player_pairs(room_data=self.room_service.get_room(self.current_room_id))
             self.selected_pairings = {}
         else:
             ui.notify('Ошибка отправки догадок', type='negative')
+
+    def show_readonly_player_pairs(self, room_data):
+        """Показывает отправленные пары игрока в режиме только чтения"""
+        nouns = room_data["game_data"]["nouns"]
+        adjectives = room_data["game_data"]["adjectives"]
+        player_guesses = room_data["game_data"]["player_guesses"]
+
+        self._ensure_player_id()
+        my_guesses = player_guesses.get(self.player_id, {})
+
+        # Статус индикатор
+        self.components.create_status_indicator('✅ Ваши пары отправлены', 'success')
+
+        # Прогресс ожидания других игроков
+        players_count = len(room_data["players"]) - 1  # Минус ведущий
+        guesses_count = len(player_guesses)
+        remaining_players = players_count - guesses_count
+
+        # ОЧИЩАЕМ КОНТЕЙНЕРЫ ПРИ СМЕНЕ ЭКРАНА
+        self._clear_ui_containers()
+        self.game_container.clear()
+        with self.game_container:
+            with ui.card().classes('w-full p-6 rounded-xl shadow-lg bg-gray-100 dark:bg-gray-800 mb-4'):
+                self.components.create_header('Игра "Лучшие Пары"')
+                current_round = room_data["game_data"]["round"]
+                self.components.create_round_indicator(current_round)
+                with ui.card().classes(
+                        'w-full p-4 mb-4 bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700'):
+                    ui.label('⏳ Ожидание других игроков').classes('text-lg font-bold text-blue-700 dark:text-blue-300 mb-2')
+
+                    # Прогресс-бар ожидания
+                    progress = (guesses_count / players_count) * 100 if players_count > 0 else 100
+                    with ui.row().classes('w-full items-center gap-4 mb-2'):
+                        ui.label(f'Ответили: {guesses_count}/{players_count}').classes('text-sm font-medium min-w-[120px]')
+                        with ui.element('div').classes('flex-1 bg-blue-200 dark:bg-blue-700 rounded-full h-2'):
+                            ui.element('div').classes('bg-blue-600 h-2 rounded-full transition-all duration-300').style(
+                                f'width: {progress}%')
+                        ui.label(f'{progress:.0f}%').classes('text-sm font-medium min-w-[40px]')
+
+                    if remaining_players > 0:
+                        ui.label(f'Осталось ждать: {remaining_players} игрок(ов)').classes(
+                            'text-sm text-blue-600 dark:text-blue-400')
+                    else:
+                        ui.label('Все игроки ответили! Скоро будут результаты...').classes(
+                            'text-sm text-green-600 dark:text-green-400 font-medium')
+
+                # Заголовок для ваших пар
+                ui.label('📋 Ваши варианты пар:').classes('text-xl font-bold text-purple-700 dark:text-purple-300 mb-2')
+                ui.label('Вот как вы думаете, ведущий разложил прилагательные').classes('text-gray-600 dark:text-gray-300 mb-4')
+
+                # Показываем пары в режиме только чтения
+                self.show_readonly_pairs_display(nouns, my_guesses)
+
+                # Дополнительная информация
+                with ui.card().classes(
+                        'w-full p-4 mt-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700'):
+                    with ui.row().classes('w-full items-center gap-4'):
+                        ui.icon('info', color='gray').classes('text-2xl')
+                        with ui.column().classes('flex-1'):
+                            ui.label('💡 Пока ждете, можете подумать о своем выборе').classes(
+                                'text-sm font-medium text-gray-700 dark:text-gray-300')
+                            ui.label('Скоро узнаете, насколько точно угадали логику ведущего!').classes(
+                                'text-xs text-gray-500 dark:text-gray-400')
+
+    def show_readonly_pairs_display(self, nouns, player_guesses):
+        """Отображает пары в режиме только чтения с красивым дизайном"""
+        with ui.column().classes('w-full gap-3'):
+            for idx, noun in enumerate(nouns):
+                # Получаем прилагательное для этого существительного
+                adjective = player_guesses.get(str(idx), "Не выбрано")
+
+                # Определяем стиль в зависимости от наличия выбора
+                if adjective != "Не выбрано":
+                    card_class = 'p-4 shadow-md bg-purple-50 dark:bg-purple-900 border border-purple-200 dark:border-purple-700'
+                    text_class = 'text-purple-700 dark:text-purple-300'
+                    icon_class = 'text-purple-500'
+                else:
+                    card_class = 'p-4 shadow-md bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
+                    text_class = 'text-gray-500 dark:text-gray-400'
+                    icon_class = 'text-gray-400'
+
+                with ui.card().classes(card_class):
+                    with ui.row().classes('w-full items-center gap-4'):
+                        # Номер и существительное
+                        ui.label(f"{idx + 1}. {noun}").classes(f'text-lg font-bold min-w-[150px] {text_class}')
+
+                        # Стрелка
+                        ui.icon('arrow_forward').classes(f'{icon_class} text-xl')
+
+                        # Прилагательное в рамке
+                        with ui.element('div').classes(
+                                f'flex-1 px-3 py-2 rounded border-2 border-dashed {icon_class.replace("text-", "border-")} bg-white dark:bg-gray-900'):
+                            ui.label(adjective).classes(f'text-lg font-medium {text_class}')
+
+                        # Иконка блокировки
+                        ui.icon('lock', color='gray').classes('text-gray-400 text-xl')
 
     def show_waiting_for_host(self, room_data):
         """Интерфейс ожидания для игроков пока ведущий раскладывает"""
@@ -1114,14 +1213,6 @@ class BestPairsGameUI:
             if not is_valid and error_message != 'Не все пары выбраны':
                 ui.label(f'⚠️ {error_message}').classes('text-red-600 text-sm mt-2')
 
-    def refresh_pairing_interface(self, nouns, adjectives):
-        """Обновляет весь интерфейс после изменений"""
-        self.update_status_display(adjectives)
-        self.update_pairs_display(nouns, adjectives)
-        self.update_submit_button(adjectives)
-
-
-
     def leave_room(self):
         """Покидает текущую комнату"""
         self._ensure_player_id()
@@ -1155,3 +1246,7 @@ class BestPairsGameUI:
         self.players_table_container = None
         self.rooms_list_container = None
         self.guessing_status_container = None
+        self.status_container = None
+        self.pairs_container = None
+        self.button_container = None
+        self.controls_container = None
