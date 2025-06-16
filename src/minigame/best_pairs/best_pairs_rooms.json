@@ -2,20 +2,20 @@
   "pairs_3224": {
     "room_id": "pairs_3224",
     "created_at": 1750071879,
-    "last_activity": 1750072113,
+    "last_activity": 1750073505,
     "status": "waiting",
     "host_id": "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae",
-    "current_host_index": 1,
-    "rounds_played": 1,
+    "current_host_index": 2,
+    "rounds_played": 2,
     "players": [
       {
         "id": "90dfceca-a1c9-44cd-bfa8-d3f7583e7aae",
         "name": "lucky_illia",
         "is_host": true,
         "joined_at": 1750071879,
-        "last_action": 1750072113,
+        "last_action": 1750073505,
         "is_ready": false,
-        "score": 1,
+        "score": 2,
         "rounds_as_host": 1
       },
       {
@@ -23,19 +23,19 @@
         "name": "test1",
         "is_host": false,
         "joined_at": 1750071881,
-        "last_action": 1750072113,
+        "last_action": 1750073505,
         "is_ready": false,
         "score": 5,
-        "rounds_as_host": 0
+        "rounds_as_host": 1
       },
       {
         "id": "42ce3bc8-67ae-4131-aa66-0e7a730ec65f",
         "name": "test2",
         "is_host": false,
         "joined_at": 1750071883,
-        "last_action": 1750072113,
+        "last_action": 1750073505,
         "is_ready": false,
-        "score": 1,
+        "score": 2,
         "rounds_as_host": 0
       }
     ],
@@ -45,7 +45,7 @@
       "host_pairings": {},
       "player_guesses": {},
       "round": 0,
-      "current_round_host": "6b652e65-7cf9-4377-8031-192076a4e125",
+      "current_round_host": "42ce3bc8-67ae-4131-aa66-0e7a730ec65f",
       "round_scores": {},
       "scores_applied": false
     }
