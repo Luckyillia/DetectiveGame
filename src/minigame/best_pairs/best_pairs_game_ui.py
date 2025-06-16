@@ -514,41 +514,9 @@ class BestPairsGameUI:
                 elif current_round == 4:  # Конец раунда
                     self.show_round_end_interface(room_data)
 
-    def show_host_pairing_interface(self, room_data):
-        """Интерфейс для ведущего - составление пар с улучшенной валидацией"""
-        nouns = room_data["game_data"]["nouns"]
-        adjectives = room_data["game_data"]["adjectives"]
-
-        ui.label('Составьте пары: Существительное + Прилагательное').classes(
-            'text-xl font-bold text-purple-700 dark:text-purple-300 mb-4')
-        ui.label('Каждый прилагательный можно использовать только один раз!').classes(
-            'text-orange-600 dark:text-orange-300 mb-4 font-medium')
-
-        # Инициализируем выбранные пары
-        if not self.selected_pairings:
-            self.selected_pairings = {}
-
-        # Контейнер для динамического обновления статуса
-        self.status_container = ui.element('div').classes('w-full mb-4')
-
-        # Контейнер для пар
-        self.pairs_container = ui.element('div').classes('w-full')
-
-        # Контейнер для кнопки
-        self.button_container = ui.element('div').classes('w-full mt-4')
-
-        # Функция для обновления всего интерфейса
-        def refresh_interface():
-            self.update_status_display(adjectives)
-            self.update_pairs_display(nouns, adjectives)
-            self.update_submit_button(adjectives)
-
-        # Первоначальное отображение
-        refresh_interface()
-
     def update_pairing(self, noun_idx, adjective):
-        """Обновляет выбранную пару с проверкой уникальности"""
-        if adjective:
+        """Обновляет выбранную пару с проверкой уникальности и поддержкой сброса"""
+        if adjective and adjective != "":  # Если выбрано что-то кроме пустого значения
             # Проверяем, не использован ли уже этот прилагательный
             for existing_noun_idx, existing_adj in list(self.selected_pairings.items()):
                 if existing_adj == adjective and existing_noun_idx != noun_idx:
@@ -558,14 +526,17 @@ class BestPairsGameUI:
                     break
 
             self.selected_pairings[noun_idx] = adjective
-        elif noun_idx in self.selected_pairings:
-            del self.selected_pairings[noun_idx]
+        else:  # Если выбрано пустое значение или None - сбрасываем
+            if noun_idx in self.selected_pairings:
+                removed_adj = self.selected_pairings[noun_idx]
+                del self.selected_pairings[noun_idx]
+                ui.notify(f'Прилагательное "{removed_adj}" удалено', type='info')
 
     def validate_pairings(self, adjectives):
         """Проверяет корректность выбранных пар"""
         # Проверяем, что выбраны все 5 пар
         if len(self.selected_pairings) != 5:
-            return False, 'Не все пары выбраны!'
+            return False, f'Выбрано {len(self.selected_pairings)}/5 пар'
 
         # Проверяем, что все прилагательные из допустимого списка
         for adj in self.selected_pairings.values():
@@ -584,6 +555,258 @@ class BestPairsGameUI:
             return False, f'Прилагательные используются повторно: {", ".join(duplicates)}'
 
         return True, 'Все пары корректны'
+
+    def create_pairing_options(self, adjectives, current_selection=None):
+        """Создает список опций для выпадающего списка с пустым вариантом"""
+        options = [""]  # Пустой вариант для сброса
+
+        # Добавляем текущий выбор, если он есть
+        if current_selection and current_selection not in options:
+            options.append(current_selection)
+
+        # Добавляем доступные прилагательные
+        used_adjectives = set(self.selected_pairings.values())
+        for adj in adjectives:
+            if adj not in used_adjectives and adj not in options:
+                options.append(adj)
+
+        return options
+
+    def reset_all_pairings(self):
+        """Сбрасывает все выбранные пары"""
+        if self.selected_pairings:
+            count = len(self.selected_pairings)
+            self.selected_pairings = {}
+            ui.notify(f'Сброшено {count} пар', type='info')
+            return True
+        else:
+            ui.notify('Нет пар для сброса', type='warning')
+            return False
+
+    def show_unified_pairing_interface(self, room_data, is_host=True):
+        """Унифицированный интерфейс для выбора пар (хост и игроки)"""
+        nouns = room_data["game_data"]["nouns"]
+        adjectives = room_data["game_data"]["adjectives"]
+
+        # Разные заголовки для хоста и игроков
+        if is_host:
+            title = 'Составьте пары: Существительное + Прилагательное'
+            subtitle = 'Разложите прилагательные к подходящим существительным'
+            button_text = 'Подтвердить расклад'
+            button_icon = 'check'
+            submit_function = self.submit_host_pairings
+        else:
+            title = 'Угадайте, как ведущий разложил пары!'
+            subtitle = 'Попробуйте понять логику ведущего'
+            button_text = 'Отправить догадки'
+            button_icon = 'send'
+            submit_function = self.submit_player_guesses
+
+        ui.label(title).classes('text-xl font-bold text-purple-700 dark:text-purple-300 mb-2')
+        ui.label(subtitle).classes('text-gray-600 dark:text-gray-300 mb-2')
+        ui.label('Каждый прилагательный можно использовать только один раз!').classes(
+            'text-orange-600 dark:text-orange-300 mb-4 font-medium')
+
+        # Инициализируем выбранные пары
+        if not self.selected_pairings:
+            self.selected_pairings = {}
+
+        # Контейнеры для динамического обновления
+        self.status_container = ui.element('div').classes('w-full mb-4')
+        self.pairs_container = ui.element('div').classes('w-full')
+        self.controls_container = ui.element('div').classes('w-full mt-4')
+
+        # Функция для обновления интерфейса
+        def refresh_interface():
+            self.update_status_display(adjectives)
+            self.update_pairs_display(nouns, adjectives, submit_function)
+            self.update_controls(adjectives, button_text, button_icon, submit_function)
+
+        # Первоначальное отображение
+        refresh_interface()
+
+    def update_status_display(self, adjectives):
+        """Обновляет отображение статуса использования прилагательных"""
+        self.status_container.clear()
+        with self.status_container:
+            used_adjectives = set(self.selected_pairings.values())
+            available_adjectives = [adj for adj in adjectives if adj not in used_adjectives]
+
+            # Прогресс-бар
+            progress = len(used_adjectives) / 5 * 100
+            with ui.row().classes('w-full items-center gap-4 mb-3'):
+                ui.label(f'Прогресс: {len(used_adjectives)}/5').classes('text-sm font-medium min-w-[100px]')
+                with ui.element('div').classes('flex-1 bg-gray-200 dark:bg-gray-600 rounded-full h-3'):
+                    ui.element('div').classes(f'bg-purple-600 h-3 rounded-full transition-all duration-300').style(
+                        f'width: {progress}%')
+                ui.label(f'{progress:.0f}%').classes('text-sm font-medium min-w-[40px]')
+
+            # Статус по цветам в две колонки
+            with ui.row().classes('w-full gap-4 mb-2'):
+                # Использованные прилагательные
+                with ui.column().classes('flex-1'):
+                    ui.label('✅ Использованные:').classes('text-sm font-bold text-green-600')
+                    if used_adjectives:
+                        ui.label(', '.join(sorted(used_adjectives))).classes(
+                            'text-xs text-green-700 dark:text-green-300 break-words')
+                    else:
+                        ui.label('Пока нет').classes('text-xs text-gray-500 italic')
+
+                # Доступные прилагательные
+                with ui.column().classes('flex-1'):
+                    ui.label('⭕ Доступные:').classes('text-sm font-bold text-blue-600')
+                    if available_adjectives:
+                        # Показываем только первые 8, если их много
+                        display_available = available_adjectives[:8]
+                        remaining = len(available_adjectives) - 8
+                        display_text = ', '.join(display_available)
+                        if remaining > 0:
+                            display_text += f' ... (+{remaining})'
+                        ui.label(display_text).classes('text-xs text-blue-700 dark:text-blue-300 break-words')
+                    else:
+                        ui.label('Все использованы').classes('text-xs text-gray-500 italic')
+
+    def update_pairs_display(self, nouns, adjectives, submit_function):
+        """Обновляет отображение пар с выпадающими списками"""
+        self.pairs_container.clear()
+        with self.pairs_container:
+            with ui.column().classes('w-full gap-3'):
+                for idx, noun in enumerate(nouns):
+                    with ui.card().classes('p-4 shadow-md hover:shadow-lg transition-shadow'):
+                        with ui.row().classes('w-full items-center gap-4'):
+                            # Номер и существительное
+                            ui.label(f"{idx + 1}. {noun}").classes(
+                                'text-lg font-bold min-w-[150px] text-gray-800 dark:text-gray-200')
+
+                            # Стрелка
+                            ui.icon('arrow_forward').classes('text-purple-500 text-xl')
+
+                            # Выпадающий список с пустым вариантом
+                            current_adj = self.selected_pairings.get(idx, None)
+                            options = self.create_pairing_options(adjectives, current_adj)
+
+                            adj_select = ui.select(
+                                options,
+                                label='Выберите прилагательное',
+                                value=current_adj if current_adj else "",
+                                on_change=lambda e, i=idx: self.handle_pairing_change(i, e.value, nouns, adjectives,
+                                                                                      submit_function)
+                            ).classes('flex-1')
+
+                            # Настраиваем placeholder для пустого варианта
+                            adj_select.props('clearable outlined dense')
+
+                            # Индикатор статуса
+                            if current_adj:
+                                ui.icon('check_circle', color='green').classes('text-green-500 text-xl')
+                            else:
+                                ui.icon('radio_button_unchecked', color='gray').classes('text-gray-400 text-xl')
+
+    def handle_pairing_change(self, noun_idx, adjective, nouns, adjectives, submit_function):
+        """Обрабатывает изменение пары с обновлением интерфейса"""
+        # Обновляем пару
+        self.update_pairing(noun_idx, adjective)
+
+        # Обновляем интерфейс
+        self.refresh_unified_interface(nouns, adjectives, submit_function)
+
+    def refresh_unified_interface(self, nouns, adjectives, submit_function):
+        """Обновляет весь унифицированный интерфейс"""
+        self.update_status_display(adjectives)
+        self.update_pairs_display(nouns, adjectives, submit_function)
+
+        # Определяем тип кнопки по функции
+        if submit_function == self.submit_host_pairings:
+            button_text = 'Подтвердить расклад'
+            button_icon = 'check'
+        else:
+            button_text = 'Отправить догадки'
+            button_icon = 'send'
+
+        self.update_controls(adjectives, button_text, button_icon, submit_function)
+
+    def update_controls(self, adjectives, button_text, button_icon, submit_function):
+        """Обновляет элементы управления (кнопки)"""
+        self.controls_container.clear()
+        with self.controls_container:
+            is_complete = len(self.selected_pairings) == 5
+            is_valid, error_message = self.validate_pairings(adjectives) if is_complete else (False,
+                                                                                              f'Выбрано {len(self.selected_pairings)}/5 пар')
+
+            # Основные кнопки
+            with ui.row().classes('w-full gap-4 justify-center'):
+                # Кнопка сброса всех пар
+                reset_button = ui.button(
+                    '🗑️ Сбросить все',
+                    icon='clear_all',
+                    on_click=lambda: self.handle_reset_all(adjectives, submit_function)
+                ).classes('bg-red-500 hover:bg-red-600 text-white')
+
+                if not self.selected_pairings:
+                    reset_button.disable()
+
+                # Основная кнопка отправки
+                if is_valid:
+                    submit_button_class = 'bg-green-600 hover:bg-green-700 text-white px-8'
+                    submit_button_text = f'✅ {button_text}'
+                    enabled = True
+                elif is_complete:
+                    submit_button_class = 'bg-red-600 hover:bg-red-700 text-white px-8'
+                    submit_button_text = f'❌ Исправить ошибки'
+                    enabled = False
+                else:
+                    submit_button_class = 'bg-gray-400 text-gray-600 cursor-not-allowed px-8'
+                    submit_button_text = f'⏳ {error_message}'
+                    enabled = False
+
+                submit_button = ui.button(
+                    submit_button_text,
+                    icon=button_icon if is_valid else 'warning',
+                    on_click=lambda: submit_function(adjectives) if enabled else None
+                ).classes(submit_button_class)
+
+                if not enabled:
+                    submit_button.disable()
+
+            # Сообщение об ошибке
+            if not is_valid and is_complete:
+                ui.label(f'⚠️ {error_message}').classes('text-red-600 text-sm mt-2 text-center font-medium')
+
+    def handle_reset_all(self, adjectives, submit_function):
+        """Обработчик сброса всех пар"""
+        if self.reset_all_pairings():
+            # Получаем nouns из контекста (нужно передать или сохранить)
+            # Для этого добавим их как атрибут класса
+            if hasattr(self, 'current_nouns'):
+                self.refresh_unified_interface(self.current_nouns, adjectives, submit_function)
+
+    # ОБНОВЛЕННЫЕ ОСНОВНЫЕ ФУНКЦИИ ИНТЕРФЕЙСА
+
+    def show_host_pairing_interface(self, room_data):
+        """Интерфейс для ведущего - составление пар"""
+        # Сохраняем существительные для использования в других функциях
+        self.current_nouns = room_data["game_data"]["nouns"]
+        self.show_unified_pairing_interface(room_data, is_host=True)
+
+    def show_player_guessing_interface(self, room_data):
+        """Интерфейс для игроков - угадывание пар"""
+        nouns = room_data["game_data"]["nouns"]
+        adjectives = room_data["game_data"]["adjectives"]
+
+        # Проверяем, не отправил ли игрок уже свои догадки
+        self._ensure_player_id()
+        already_guessed = self.player_id in room_data["game_data"]["player_guesses"]
+
+        if already_guessed:
+            self.components.create_status_indicator('Вы уже отправили свои догадки', 'success')
+            ui.label('Ожидаем остальных игроков...').classes('text-center mt-4')
+            return
+
+        # Сохраняем существительные и используем унифицированный интерфейс
+        self.current_nouns = nouns
+        self.show_unified_pairing_interface(room_data, is_host=False)
+
+    # ОБНОВЛЕННЫЕ ФУНКЦИИ ОТПРАВКИ
 
     def submit_host_pairings(self, adjectives):
         """Отправляет выбранные пары с проверкой уникальности"""
@@ -606,6 +829,28 @@ class BestPairsGameUI:
             self.selected_pairings = {}
         else:
             ui.notify('Ошибка сохранения пар', type='negative')
+
+    def submit_player_guesses(self, adjectives):
+        """Отправляет догадки игрока с проверкой уникальности"""
+        # Валидируем догадки
+        is_valid, error_message = self.validate_pairings(adjectives)
+
+        if not is_valid:
+            ui.notify(error_message, type='warning')
+            return
+
+        self._ensure_player_id()
+        success = self.room_service.submit_player_guess(
+            self.current_room_id,
+            self.player_id,
+            self.selected_pairings
+        )
+
+        if success:
+            ui.notify('Догадки отправлены!', type='positive')
+            self.selected_pairings = {}
+        else:
+            ui.notify('Ошибка отправки догадок', type='negative')
 
     def show_waiting_for_host(self, room_data):
         """Интерфейс ожидания для игроков пока ведущий раскладывает"""
@@ -651,82 +896,6 @@ class BestPairsGameUI:
                     ui.label(f"{int(noun_idx_str) + 1}. {noun}").classes('text-lg font-medium min-w-[150px]')
                     ui.icon('arrow_forward').classes('text-purple-500')
                     ui.label(adj).classes('text-lg font-bold text-purple-700 dark:text-purple-300')
-
-    def show_player_guessing_interface(self, room_data):
-        """Интерфейс для игроков - угадывание пар"""
-        nouns = room_data["game_data"]["nouns"]
-        adjectives = room_data["game_data"]["adjectives"]
-
-        # Проверяем, не отправил ли игрок уже свои догадки
-        self._ensure_player_id()
-        already_guessed = self.player_id in room_data["game_data"]["player_guesses"]
-
-        if already_guessed:
-            self.components.create_status_indicator('Вы уже отправили свои догадки', 'success')
-            ui.label('Ожидаем остальных игроков...').classes('text-center mt-4')
-            return
-
-        ui.label('Угадайте, как ведущий разложил пары!').classes(
-            'text-xl font-bold text-purple-700 dark:text-purple-300 mb-4')
-
-        # Инициализируем выбранные пары
-        if not self.selected_pairings:
-            self.selected_pairings = {}
-
-        # Показываем интерфейс для выбора
-        with ui.grid(columns=2).classes('w-full gap-4 mb-4'):
-            # Левая колонка - существительные с выбором
-            with ui.column().classes('w-full'):
-                ui.label('Существительные').classes('text-lg font-bold mb-2 text-center')
-                for idx, noun in enumerate(nouns):
-                    with ui.card().classes('p-4 shadow-lg'):
-                        with ui.row():
-                            ui.label(f"{idx + 1}. {noun}").classes('text-lg font-bold text-center')
-
-                            # Выпадающий список для выбора прилагательного
-                            current_adj = self.selected_pairings.get(idx, None)
-
-                            adj_select = ui.select(
-                                adjectives,
-                                label='Выберите прилагательное',
-                                value=current_adj,
-                                on_change=lambda e, i=idx: self.update_pairing(i, e.value)
-                            ).classes('w-full mt-2')
-
-        # Показываем все доступные прилагательные
-        ui.label('Доступные прилагательные:').classes('text-lg font-bold mb-2')
-        ui.label(', '.join(adjectives)).classes('text-purple-700 dark:text-purple-300 mb-4')
-
-
-        ui.button(
-            'Отправить догадки',
-            icon='send',
-            on_click=lambda: self.submit_player_guesses(adjectives)
-        ).classes(
-            'bg-green-600 hover:bg-green-700 text-white'
-        )
-
-    def submit_player_guesses(self, adjectives):
-        """Отправляет догадки игрока с проверкой уникальности"""
-        # Валидируем догадки
-        is_valid, error_message = self.validate_pairings(adjectives)
-
-        if not is_valid:
-            ui.notify(error_message, type='warning')
-            return
-
-        self._ensure_player_id()
-        success = self.room_service.submit_player_guess(
-            self.current_room_id,
-            self.player_id,
-            self.selected_pairings
-        )
-
-        if success:
-            ui.notify('Догадки отправлены!', type='positive')
-            self.selected_pairings = {}
-        else:
-            ui.notify('Ошибка отправки догадок', type='negative')
 
     def show_results_interface(self, room_data):
         """Показывает результаты раунда"""
@@ -893,99 +1062,6 @@ class BestPairsGameUI:
                     pass
 
 
-    def update_status_display(self, adjectives):
-        """Обновляет отображение статуса использования прилагательных"""
-        self.status_container.clear()
-        with self.status_container:
-            used_adjectives = set(self.selected_pairings.values())
-            available_adjectives = [adj for adj in adjectives if adj not in used_adjectives]
-
-            # Прогресс-бар
-            progress = len(used_adjectives) / 5 * 100
-            with ui.row().classes('w-full items-center gap-4 mb-2'):
-                ui.label(f'Прогресс: {len(used_adjectives)}/5').classes('text-sm font-medium')
-                with ui.element('div').classes('flex-1 bg-gray-200 rounded-full h-2'):
-                    ui.element('div').classes(f'bg-purple-600 h-2 rounded-full').style(f'width: {progress}%')
-
-            # Статус по цветам
-            with ui.row().classes('w-full gap-4 mb-2'):
-                if used_adjectives:
-                    with ui.column().classes('flex-1'):
-                        ui.label('✅ Использованные:').classes('text-sm font-bold text-green-600')
-                        ui.label(', '.join(sorted(used_adjectives))).classes(
-                            'text-xs text-green-700 dark:text-green-300')
-
-                if available_adjectives:
-                    with ui.column().classes('flex-1'):
-                        ui.label('⭕ Доступные:').classes('text-sm font-bold text-blue-600')
-                        # Показываем только первые 10, если их много
-                        display_available = available_adjectives[:10]
-                        remaining = len(available_adjectives) - 10
-                        display_text = ', '.join(display_available)
-                        if remaining > 0:
-                            display_text += f' ... и еще {remaining}'
-                        ui.label(display_text).classes('text-xs text-blue-700 dark:text-blue-300')
-
-    def update_pairs_display(self, nouns, adjectives):
-        """Обновляет отображение пар с выпадающими списками"""
-        self.pairs_container.clear()
-        with self.pairs_container:
-            used_adjectives = set(self.selected_pairings.values())
-
-            with ui.grid(columns=1).classes('w-full gap-4'):
-                for idx, noun in enumerate(nouns):
-                    with ui.card().classes('p-4 shadow-lg'):
-                        with ui.row().classes('w-full items-center gap-4'):
-                            # Номер и существительное
-                            ui.label(f"{idx + 1}. {noun}").classes('text-lg font-bold min-w-[150px]')
-
-                            # Стрелка
-                            ui.icon('arrow_forward').classes('text-purple-500')
-
-                            # Выпадающий список
-                            current_adj = self.selected_pairings.get(idx, None)
-
-                            # Создаем список опций: текущий выбор + доступные
-                            options = []
-                            if current_adj:
-                                options.append(current_adj)
-
-                            # Добавляем доступные прилагательные
-                            for adj in adjectives:
-                                if adj not in used_adjectives and adj not in options:
-                                    options.append(adj)
-
-                            # Создаем выпадающий список
-                            adj_select = ui.select(
-                                options,
-                                label='Выберите прилагательное',
-                                value=current_adj,
-                                on_change=lambda e, i=idx: self.handle_pairing_change(i, e.value, nouns, adjectives)
-                            ).classes('flex-1')
-
-                            # Индикатор статуса
-                            if current_adj:
-                                ui.icon('check_circle', color='green').classes('text-green-500')
-                            else:
-                                ui.icon('radio_button_unchecked', color='gray').classes('text-gray-400')
-
-    def handle_pairing_change(self, noun_idx, adjective, nouns, adjectives):
-        """Обрабатывает изменение пары с обновлением интерфейса"""
-        # Сохраняем старое значение для восстановления в случае проблемы
-        old_adjective = self.selected_pairings.get(noun_idx, None)
-
-        # Обновляем пару
-        self.update_pairing(noun_idx, adjective)
-
-        # Проверяем валидность
-        is_valid, error_message = self.validate_current_selection(adjectives)
-
-        if not is_valid and adjective:  # Показываем ошибку только если что-то выбрано
-            ui.notify(error_message, type='warning')
-
-        # Обновляем интерфейс
-        self.refresh_pairing_interface(nouns, adjectives)
-
     def validate_current_selection(self, adjectives):
         """Быстрая валидация текущего выбора без требования полноты"""
         # Проверяем уникальность среди выбранных
@@ -1043,6 +1119,8 @@ class BestPairsGameUI:
         self.update_status_display(adjectives)
         self.update_pairs_display(nouns, adjectives)
         self.update_submit_button(adjectives)
+
+
 
     def leave_room(self):
         """Покидает текущую комнату"""
